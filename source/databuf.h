@@ -30,6 +30,11 @@ int write_buf(databuf* buf, size_t datalen, const void* write_data);
 //returns 0 on success, -1 on error and sets errno
 int destroy_data_buffer(databuf* buf);
 
+/* resizes the data buffer, allowing writing using a raw pointer
+ * if newsize is smaller than buf_size, some of the current data will be lost
+ * returns 0 on success, -1 on error and sets errno */
+int resize_data_buffer(databuf* buf, size_t newsize);
+
 /* replaces the data into the data buffer with the given buffer.
  * useful if you want to link an existing buffer into this structure.
  * the old buffer is destroyed. make sure that buffer has been allocated

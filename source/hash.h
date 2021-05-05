@@ -10,11 +10,11 @@
  *   NO checks are performed upon the data passed!
  *   Please avoid using invalid data pointers and/or sizes.
  * */
-uint64_t hash(void* data, size_t len)
+uint64_t hash(const void* data, size_t len)
 {
 	uint64_t hash = 5381;
 	for(size_t i = 0; i < len; i++)
-		hash = ((hash << 5) + hash) + data[i]; /* hash * 33 + data[i] */
+		hash = ((hash << 5) + hash) + *(const uint8_t*)(data + i); /* hash * 33 + data[i] */
 
 	return hash;
 }

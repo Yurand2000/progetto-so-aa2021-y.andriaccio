@@ -93,6 +93,22 @@ int destroy_data_buffer(databuf* buf)
 	return 0;
 }
 
+int resize_data_buffer(databuf* buf, size_t newsize)
+{
+	if(buf == NULL)
+	{
+		errno = EINVAL;
+		return -1;
+	}
+
+	int err = realloc_buf(buf, newsize);
+	if(err == -1) return -1;
+
+	if(buf->buf_size > newsize)
+		buf->buf_size = newsize;
+	return 0;
+}
+
 int replace_data_buffer(databuf* buf, void* buffer, size_t buf_size, size_t buf_cap)
 {
 	if(buf == NULL || (buffer == NULL && buf_cap != 0) || buf_size > buf_cap)
