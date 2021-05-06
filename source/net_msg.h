@@ -13,6 +13,9 @@ typedef struct network_message {
 	uint64_t checksum;
 } net_msg;
 
+/* all the functions except write_msg and read_msg can be safely not error checked if
+ * the pointer to net_msg struct is a valid pointer. */
+
 /* initializes the net_msg structure
  * returns 0 on success, -1 on error and sets errno */
 int create_message(net_msg* msg);

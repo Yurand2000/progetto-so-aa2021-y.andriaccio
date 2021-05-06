@@ -1,38 +1,48 @@
 CC	=	gcc
 CFLAGS	=	-Wall
 
-.PHONY: clean all internal set_debug
+SOURCE	= ./source
+BUILD	= ./build
+BTEST	= $(BUILD)/tests
+TESTD	= ./tests
 
-all	:
+.PHONY: clean cleanobj all internal set_debug server client
+TARGET = server client
+
+SRC_FILE = $(wildcard $(SOURCE)/*.c)
+OBJ_FILE = $(patsubst $(SOURCE)/%.c, $(BUILD)/%.o, $(SRC_FILE))
+SRC_TEST = $(wildcard $(TESTD)/*.c)
+OUT_TEST = $(patsubst $(TESTD)/%.c, $(BTEST)/%.out, $(SRC_TEST))
+
+all	: $(TARGET)
+
+server :
+client :
 
 internal_build	:	CFLAGS += -g
-internal_build	:	build/tests/databuf_test.out build/tests/net_msg_test.out
+internal_build	:	$(OBJ_FILE) $(OUT_TEST)
 
 internal	:	internal_build
 	echo
-	./build/tests/databuf_test.out
-	./build/tests/net_msg_test.out
+	$(BTEST)/databuf_test.out
+	$(BTEST)/net_msg_test.out
 
-clean	:
-	-rm -f -r build
-	mkdir build
-	mkdir build/tests
+clear : clean
+clean :
+	-rm -f -r $(BUILD)
+	mkdir $(BUILD)
+	mkdir $(BTEST)
 
-build/databuf.o	:	source/databuf.c source/databuf.h
-	$(CC) $(CFLAGS) -c $< -o $@
+cleanobj :
+	-rm -r $(BUILD)/*.o
 
-build/net_msg.o	:	source/net_msg.c source/net_msg.h source/hash.h
+$(BUILD)/%.o : $(SOURCE)/%.c #$(SOURCE)/%.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 #TESTS HERE
-build/tests/databuf_test.o	:	tests/databuf_test.c
-	$(CC) $(CFLAGS) -c $^ -o $@
+$(BTEST)/%.o : $(TESTD)/%.c $(SOURCE)/*.h
+	$(CC) $(CFLAGS) -c $< -o $@
 
-build/tests/databuf_test.out	:	build/databuf.o build/tests/databuf_test.o
+$(BTEST)/%.out : $(BTEST)/%.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $@
 
-build/tests/net_msg_test.o	:	tests/net_msg_test.c
-	$(CC) $(CFLAGS) -c $^ -o $@
-
-build/tests/net_msg_test.out	:	build/databuf.o build/net_msg.o build/tests/net_msg_test.o
-	$(CC) $(CFLAGS) $^ -o $@

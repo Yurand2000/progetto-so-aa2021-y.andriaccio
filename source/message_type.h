@@ -1,0 +1,27 @@
+#ifndef NETWORK_MESSAGE_TYPE
+#define NETWORK_MESSAGE_TYPE
+
+#include "net_msg.h"
+
+//server side messages
+#define MESSAGE_OCONN_ACK 1024
+#define MESSAGE_CCONN_ACK 1025
+#define MESSAGE_OFILE_ACK 1026
+
+//client side messages
+#define MESSAGE_OPEN_CONN 1
+#define MESSAGE_CLOSE_CONN 2
+#define MESSAGE_OPEN_FILE 3
+#define MESSAGE_CLONE_FILE 4
+#define MESSAGE_READ_FILE 5
+#define MESSAGE_WRITE_FILE 6
+#define MESSAGE_APPEND_FILE 7
+#define MESSAGE_LOCK_FILE 8
+#define MESSAGE_UNLOCK_FILE 9
+
+//MESSAGE_OFILE_ACK codes
+#define MESSAGE_OFILE_SUCCESS 0
+#define MESSAGE_OFILE_EXIST 1
+#define MESSAGE_OFILE_NEXIST 2
+
+#endif
