@@ -3,12 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-
-//if NDEBUG is already defined or DATABUF_TEST is defined then asserts are skipped
-#ifndef DATABUF_TEST
-	#define NDEBUG
-#endif
 #include <assert.h>
+
+#include "errset.h"
 
 #define REALLOC_SIZE 2
 
@@ -28,12 +25,8 @@ static int realloc_buf(databuf* buf, size_t newsize)
 
 int create_data_buffer(databuf* out)
 {
-	if(out == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
-
+	if(out == NULL) ERRSET(EINVAL, -1);
+	
 	out->buffer = NULL;
 	out->buf_size = 0;
 	out->buf_cap = 0;
@@ -42,16 +35,8 @@ int create_data_buffer(databuf* out)
 
 int read_buf(databuf* buf, size_t datalen, void* read_data)
 {
-	if(buf == NULL || read_data == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
-	if(datalen > buf->buf_size)
-	{
-		errno = ENOBUFS;
-		return -1;
-	}
+	if(buf == NULL || read_data == NULL) ERRSET(EINVAL, -1);
+	if(datalen > buf->buf_size) ERRSET(ENOBUFS, -1);
 
 	buf->buf_size -= datalen;
 	memcpy(read_data, buf->buffer + buf->buf_size, datalen);
@@ -62,11 +47,7 @@ int read_buf(databuf* buf, size_t datalen, void* read_data)
 
 int write_buf(databuf* buf, size_t datalen, const void* write_data)
 {
-	if(buf == NULL || write_data == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(buf == NULL || write_data == NULL) ERRSET(EINVAL, -1);
 
 	if(buf->buf_cap - buf->buf_size < datalen)
 	{
@@ -81,11 +62,7 @@ int write_buf(databuf* buf, size_t datalen, const void* write_data)
 
 int destroy_data_buffer(databuf* buf)
 {
-	if(buf == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(buf == NULL) ERRSET(EINVAL, -1);
 
 	free(buf->buffer);
 	buf->buf_size = 0;
@@ -95,11 +72,7 @@ int destroy_data_buffer(databuf* buf)
 
 int resize_data_buffer(databuf* buf, size_t newsize)
 {
-	if(buf == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(buf == NULL) ERRSET(EINVAL, -1);
 
 	int err = realloc_buf(buf, newsize);
 	if(err == -1) return -1;
@@ -112,10 +85,7 @@ int resize_data_buffer(databuf* buf, size_t newsize)
 int replace_data_buffer(databuf* buf, void* buffer, size_t buf_size, size_t buf_cap)
 {
 	if(buf == NULL || (buffer == NULL && buf_cap != 0) || buf_size > buf_cap)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+		ERRSET(EINVAL, -1);
 
 	free(buf->buffer);
 	buf->buffer = buffer;

@@ -11,40 +11,38 @@
 #include "errset.h"
 #include "net_msg.h"
 #include "message_type.h"
-#define UNIX_PATH_MAX 108
-#define FILE_PATH_MAX 256
+#include "client_api_macros.h"
 
+//static variables
+/* the connection file (socket) is stored as a static variable hidden into this file. */
 static int conn = -1;
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime)
 {
 	if(conn >= 0) ERRSET(EISCONN, -1);
 
-	size_t len = strlen(sockname);
-	if(len >= UNIX_PATH_MAX)
-		ERRSET(ENAMETOOLONG, -1);
-
-	conn = socket(AF_UNIX, SOCK_STEAM, 0);
+	size_t len; SOCKNAME_VALID(sockname, &len);
+	conn = socket(AF_UNIX, SOCK_STREAM, 0);
 	if(conn == -1) return -1;
 
 	//generate connection address
 	struct sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
-	strncpy(sa.sun_path, sockname, len + 1);
+	strncpy(addr.sun_path, sockname, len + 1);
 
 	//timespec struct to wait
 	struct timespec wait_timer, elp_time;
 	long tot_time;
-	wait_time.tv_sec = 0;
-	wait_time.tv_nsec = msec * 1000;
-	tot_time = 0
+	wait_timer.tv_sec = 0;
+	wait_timer.tv_nsec = msec * 1000;
+	tot_time = 0;
 
 	while(connect(conn, (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
 	{
 		if(errno == EAGAIN)
 		{
 			//check if you are out of time
-			if(tot_time.tv_nsec > abstime.tv_sec * 1000000000 + abstime.tv_nsec)\
+			if(tot_time > abstime.tv_sec * 1000000000 + abstime.tv_nsec)\
 				ERRSET(ETIMEDOUT, -1);
 
 			//retry
@@ -56,17 +54,13 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 	//send connection packet, otherwise connection is closed!
 	net_msg msg;
-	create_message(&msg);
-	msg.type = MESSAGE_OPEN_CONN;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_CONN);
 	set_checksum(&msg);
-	ERRCHECKDO(write_msg(conn, &msg), delete_message(&msg));
 
-	delete_message(&msg);
-	create_message(&msg);
-	ERRCHECKDO(read_msg(conn, &msg), delete_message(&msg));
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
-	int check = check_checksum(&msg) && msg.type == MESSAGE_OCONN_ACK;
-	delete_message(&msg);
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_OCONN_ACK);
+	destroy_message(&msg);
 	if(check)
 		return 0;
 	else
@@ -78,95 +72,217 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 int closeConnection(const char* sockname)
 {
-	if(conn < 0) ERRSET(ENOTCONN, -1);
+	SOCK_VALID(conn);
 
 	//send close message, just to be polite with the server.
 	net_msg msg;
-	create_message(&msg);
-	msg.type = MESSAGE_CLOSE_CONN;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_CLOSE_CONN);
 	set_checksum(&msg);
-	ERRCHECKDO(write_msg(conn, &msg), delete_message(&msg));
 
-	delete_message(&msg);
-	/* we don't really need to wait for the server answer, it is just to not abruptly disconnect.
-	create_message(&msg);
-	ERRCHECKDO(read_msg(conn, &msg), delete_message(&msg));
-
-	int check = check_checksum(&msg) && msg.type == MESSAGE_CCONN_ACK;
-	delete_message(&msg);
-	*/
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+	destroy_message(&msg);
+	//we wait for the server answer just to be sure it has received our message.
 
 	return close(conn);
 }
 
 int openFile(const char* pathname, int flags)
 {
-	size_t len = strlen(pathname);
-	if(len > FILE_PATH_MAX) ERRSET(ENAMETOOLONG, -1);
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
 	flags &= O_CREATE | O_LOCK;	//make sure there are only valid flags to send.
 
-	net_msg msg, answ;
-	create_message(&msg);
-	msg.type = MESSAGE_OPEN_FILE;
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_FILE);
 	write_buf(&msg.data, sizeof(int), &flags);
-	write_buf(&msg.data, len + 1, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
 	set_checksum(&msg);
 
-	ERRCHECKDO(write_msg(conn, &msg), delete_message(&msg));
-	delete_message(&msg);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
-	create_message(&msg);
-	ERRCHECKDO(read_msg(conn, &msg), delete_message(&msg));
 
-	int check = check_checksum(&msg) && msg.type == MESSAGE_OFILE_ACK;
-	delete_message(&msg);
-
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_OFILE_ACK);
+	destroy_message(&msg);
 	if(check)
 	{
-		int ret_cond;
-		read_buf(&msg.data, sizeof(int), &ret_cond);
-		switch(ret_cond)
-		{
-		case MESSAGE_OFILE_SUCCESS:
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
 			return 0;
-		case MESSAGE_OFILE_EXIST:
-			ERRSET(EEXIST, -1);
-		case MESSAGE_OFILE_NEXIST:
-			ERRSET(ENOENT, -1);
-		default:
-			ERRSET(EBADMSG, -1);
-		}
+		else if(HASFLAG(flags, MESSAGE_FILE_EXISTS))
+			{ ERRSET(EEXIST, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
 	}
-	else ERRSET(EBADMSG, -1);
+	else { ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 }
 
-int readFile(const char* pathname, void** buf, size_t size)
+int readFile(const char* pathname, void** buf, size_t* size)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_READ_FILE);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	if(CHECK_MSG_CNT(&msg, MESSAGE_READ_DATA))
+	{ 
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			;
+		else if(HASFLAG(flags, MESSAGE_FILE_NPERM))
+			{ ERRSET(EPERM, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
+		
+		ERRCHECKDO(read_buf(&msg.data, sizeof(size_t), size), destroy_message(&msg));
+		ERRCHECKDO(read_buf(&msg.data, *size, buf), destroy_message(&msg));
+		destroy_message(&msg);
+		return 0;
+	}
+	else { ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 }
 
 int writeFile(const char* pathname, const char* dirname)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len);
 
 }
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len);
 
 }
 
 int lockFile(const char* pathname)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_LOCK_FILE);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_LFILE_ACK);
+	destroy_message(&msg);
+	if(check)
+	{
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			return 0;
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+			{ ERRSET(EPERM, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
+	}
+	else { ERRSET(EBADMSG, -1); }
+}
+
+int unlockFile(const char* pathname)
+{
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
+
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_UNLOCK_FILE);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_ULFILE_ACK);
+	destroy_message(&msg);
+	if(check)
+	{
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			return 0;
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+			{ ERRSET(EPERM, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
+	}
+	else { ERRSET(EBADMSG, -1); }
 }
 
 int closeFile(const char* pathname)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_CLOSE_FILE);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_CFILE_ACK);
+	destroy_message(&msg);
+	if(check)
+	{
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			return 0;
+		else if(HASFLAG(flags, MESSAGE_FILE_LOCK))
+			{ ERRSET(EPERM, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
+	}
+	else { ERRSET(EBADMSG, -1); }
 }
 
 int removeFile(const char* pathname)
 {
+	SOCK_VALID(conn);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_REMOVE_FILE);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, len, pathname);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int check = CHECK_MSG_CNT(&msg, MESSAGE_RFILE_ACK);
+	destroy_message(&msg);
+	if(check)
+	{
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			return 0;
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN) || HASFLAG(flags, MESSAGE_FILE_NLOCK))
+			{ ERRSET(EPERM, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSET(ENOENT, -1); }
+		else
+			{ ERRSET(EBADMSG, -1); }
+	}
+	else { ERRSET(EBADMSG, -1); }
 }

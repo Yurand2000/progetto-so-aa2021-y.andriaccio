@@ -4,6 +4,7 @@
 #include <errno.h>
 
 #include "hash.h"
+#include "errset.h"
 
 typedef struct
 {
@@ -23,11 +24,7 @@ static int read_msgbody(int fileno, net_msg* msg, size_t read_size);
 
 int create_message(net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	msg->type = MESSAGE_NULL;
 	create_data_buffer(&(msg->data));
@@ -37,11 +34,7 @@ int create_message(net_msg* msg)
 
 int destroy_message(net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	destroy_data_buffer(&(msg->data));
 	return 0;
@@ -49,11 +42,7 @@ int destroy_message(net_msg* msg)
 
 int set_checksum(net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	msg->checksum = hash(msg->data.buffer, msg->data.buf_size);
 	return 0;
@@ -61,11 +50,7 @@ int set_checksum(net_msg* msg)
 
 int check_checksum(const net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	if(msg->checksum == hash(msg->data.buffer, msg->data.buf_size))
 		return 0;
@@ -75,11 +60,7 @@ int check_checksum(const net_msg* msg)
 
 int write_msg(int fileno, const net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	int err;
 	err = write_msghead(fileno, msg);
@@ -92,11 +73,7 @@ int write_msg(int fileno, const net_msg* msg)
 
 int read_msg(int fileno, net_msg* msg)
 {
-	if(msg == NULL)
-	{
-		errno = EINVAL;
-		return -1;
-	}
+	if(msg == NULL) ERRSET(EINVAL, -1);
 
 	int err; size_t read_size;
 	err = read_msghead(fileno, msg, &read_size);
@@ -116,11 +93,7 @@ static int write_msghead(int fileno, const net_msg* msg)
 	ssize_t err = write(fileno, &head, sizeof(msg_header));
 
 	if(err == -1) return -1;
-	if(err != sizeof(msg_header))
-	{
-		errno = EMSGSIZE;
-		return -1;
-	}
+	if(err != sizeof(msg_header)) ERRSET(EMSGSIZE, -1);
 
 	if(head.len == 0)
 		return 0;
@@ -133,11 +106,7 @@ static int write_msgbody(int fileno, const net_msg* msg)
 	ssize_t err = write(fileno, msg->data.buffer, msg->data.buf_size);
 	
 	if(err == -1) return -1;
-	if(err != msg->data.buf_size)
-	{
-		errno = EMSGSIZE;
-		return -1;
-	}
+	if(err != msg->data.buf_size) ERRSET(EMSGSIZE, -1);
 	return 0;
 }
 
@@ -147,11 +116,7 @@ static int read_msghead(int fileno, net_msg* msg, size_t* read_size)
 	ssize_t err = read(fileno, &head, sizeof(msg_header));
 	
 	if(err == -1) return -1;
-	if(err != sizeof(msg_header))
-	{
-		errno = EMSGSIZE;
-		return -1;
-	}
+	if(err != sizeof(msg_header)) ERRSET(EMSGSIZE, -1);
 
 	msg->type = head.type;
 	msg->checksum = head.checksum;
@@ -170,11 +135,7 @@ static int read_msgbody(int fileno, net_msg* msg, size_t read_size)
 	ssize_t err = read(fileno, msg->data.buffer, read_size);
 	
 	if(err == -1) return -1;
-	if(err != read_size)
-	{
-		errno = EMSGSIZE;
-		return -1;
-	}
+	if(err != read_size) ERRSET(EMSGSIZE, -1);
 
 	msg->data.buf_size = read_size;
 	return 0;
