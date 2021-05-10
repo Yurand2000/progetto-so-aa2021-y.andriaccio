@@ -2,8 +2,10 @@ CC	=	gcc
 CFLAGS	=	-Wall
 
 SOURCE	= ./source
+SEXEC   = $(SOURCE)/exec
 BUILD	= ./build
 BTEST	= $(BUILD)/tests
+BEXEC   = $(BUILD)/exec
 TESTD	= ./tests
 
 .PHONY: clean cleanobj all internal set_debug server client
@@ -17,7 +19,10 @@ OUT_TEST = $(patsubst $(TESTD)/%.c, $(BTEST)/%.out, $(SRC_TEST))
 all	: $(TARGET)
 
 server :
-client :
+client_debug : CFLAGS += -g
+client_debug : client
+client : $(BEXEC)/client.o $(OBJ_FILE)
+	$(CC) $(CFLAGS) $^ -o $(BEXEC)/$@.out
 
 internal_build	:	CFLAGS += -g
 internal_build	:	$(OBJ_FILE) $(OUT_TEST)
@@ -32,6 +37,7 @@ clean :
 	-rm -f -r $(BUILD)
 	mkdir $(BUILD)
 	mkdir $(BTEST)
+	mkdir $(BEXEC)
 
 cleanobj :
 	-rm -r $(BUILD)/*.o
