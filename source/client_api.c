@@ -1,6 +1,8 @@
 #include "client_api.h"
 
 #include <unistd.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -16,6 +18,8 @@
 //static variables
 /* the connection file (socket) is stored as a static variable hidden into this file. */
 static int conn = -1;
+
+static int write_cached_file(net_msg* msg, char* buf, size_t buf_size, const char* dirname);
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime)
 {
@@ -95,9 +99,9 @@ int openFile(const char* pathname, int flags)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_FILE);
-	write_buf(&msg.data, sizeof(int), &flags);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
+	write_buf(&msg.data, sizeof(int), &flags);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -127,8 +131,8 @@ int readFile(const char* pathname, void** buf, size_t* size)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_READ_FILE);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -146,7 +150,9 @@ int readFile(const char* pathname, void** buf, size_t* size)
 			{ ERRSET(EBADMSG, -1); }
 		
 		ERRCHECKDO(read_buf(&msg.data, sizeof(size_t), size), destroy_message(&msg));
-		ERRCHECKDO(read_buf(&msg.data, *size, buf), destroy_message(&msg));
+		MALLOCDO(*buf, (sizeof(char) * (*size)), destroy_message(&msg));
+		ERRCHECKDO(read_buf(&msg.data, *size, *buf),
+			{ destroy_message(&msg); free(*buf); } );
 		destroy_message(&msg);
 		return 0;
 	}
@@ -156,15 +162,120 @@ int readFile(const char* pathname, void** buf, size_t* size)
 int writeFile(const char* pathname, const char* dirname)
 {
 	SOCK_VALID(conn);
-	size_t len; FILENAME_VALID(pathname, &len);
+	size_t len; FILENAME_VALID(dirname, &len);
+	FILENAME_VALID(pathname, &len); len++;
 
+	//open file, check if it exists
+	int file; ERRCHECK((file = open(pathname, O_RDONLY)));
+
+	//get file size
+	struct stat file_stats;
+	ERRCHECK(fstat(file, &file_stats));
+	size_t file_size = file_stats.st_size;
+	size_t block_size = file_stats.st_blksize; //block size for efficient I/O, as stated by the manual.
+
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_WRITE_FILE);
+
+	//now write the file into the message
+	char* buf; MALLOCDO(buf, (sizeof(char) * block_size), destroy_message(&msg));
+	ssize_t read_size;
+	while((read_size = read(file, buf, block_size)) > 0)
+		write_buf(&msg.data, read_size, buf);
+	if(read_size == -1)
+	{
+		destroy_message(&msg);
+		free(buf);
+		return -1;
+	}
+	write_buf(&msg.data, sizeof(size_t), &file_size);
+	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
+
+	//if last read was 0, then it should have succeded into creating the message
+	close(file);
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int cachemiss = 0;
+	if(CHECK_MSG_CNT(&msg, MESSAGE_WRITE_ACK))
+	{
+
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_FILE_CHACEMISS))
+			cachemiss = 1;
+
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			;
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+			{ ERRSETDO(EPERM, destroy_message(&msg), -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSETDO(ENOENT, destroy_message(&msg), -1); }
+		else
+			{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
+	}
+	else { ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
+
+	if(cachemiss == 1)
+	{
+		ERRCHECKDO(write_cached_file(&msg, buf, block_size, dirname),
+			{ destroy_message(&msg); free(buf); } );
+	}
+	
+	destroy_message(&msg);
+	free(buf);
+	return 0;
 }
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname)
 {
 	SOCK_VALID(conn);
-	size_t len; FILENAME_VALID(pathname, &len);
+	size_t len; FILENAME_VALID(pathname, &len); len++;
 
+	net_msg msg;
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_APPEND_FILE);
+
+	//write the appended data into the message
+	write_buf(&msg.data, size, buf);
+	write_buf(&msg.data, sizeof(size_t), &size);
+	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
+
+	set_checksum(&msg);
+
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
+
+	int cachemiss = 0;
+	if(CHECK_MSG_CNT(&msg, MESSAGE_APPEND_ACK))
+	{
+		msg_t flags = GETFLAGS(msg.type);
+		if(HASFLAG(flags, MESSAGE_FILE_CHACEMISS))
+			cachemiss = 1;
+
+		if(HASFLAG(flags, MESSAGE_OP_SUCC))
+			;
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+			{ ERRSETDO(EPERM, destroy_message(&msg), -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			{ ERRSETDO(ENOENT, destroy_message(&msg), -1); }
+		else
+			{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
+	}
+	else { ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
+
+	if(cachemiss == 1)
+	{
+		size_t block_size = 512; //hardcode constant
+		char* block; MALLOCDO(block, (sizeof(char) * block_size), destroy_message(&msg));
+
+		ERRCHECKDO(write_cached_file(&msg, block, block_size, dirname),
+			{ destroy_message(&msg); free(block); } );
+		free(block);
+	}
+
+	destroy_message(&msg);
+	return 0;
 }
 
 int lockFile(const char* pathname)
@@ -174,8 +285,8 @@ int lockFile(const char* pathname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_LOCK_FILE);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -204,8 +315,8 @@ int unlockFile(const char* pathname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_UNLOCK_FILE);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -234,8 +345,8 @@ int closeFile(const char* pathname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_CLOSE_FILE);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -264,8 +375,8 @@ int removeFile(const char* pathname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_REMOVE_FILE);
-	write_buf(&msg.data, sizeof(size_t), &len);
 	write_buf(&msg.data, len, pathname);
+	write_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
@@ -285,4 +396,49 @@ int removeFile(const char* pathname)
 			{ ERRSET(EBADMSG, -1); }
 	}
 	else { ERRSET(EBADMSG, -1); }
+}
+
+static int write_cached_file(net_msg* msg, char* buf, size_t buf_size, const char* dirname)
+{
+	//get expelled file name
+	size_t ex_file_len;
+	read_buf(&msg->data, sizeof(size_t), &ex_file_len);
+	char* ex_file_name;
+	MALLOC(ex_file_name, (sizeof(char) * ex_file_len));
+	read_buf(&msg->data, ex_file_len, ex_file_name);
+
+	//merge dirname with expelled file name
+	size_t dir_len = strlen(dirname);
+	char* dir_file_name;
+	MALLOCDO(dir_file_name, (sizeof(char) * (dir_len + ex_file_len + 1)),
+		free(ex_file_name) );
+
+	strncpy(dir_file_name, dirname, dir_len);
+	dir_file_name[dir_len] = '/';
+	strncpy(dir_file_name + dir_len + 1, ex_file_name, ex_file_len);
+	free(ex_file_name);
+
+	//open expelled file
+	int ex_file; ERRCHECKDO((ex_file = open(dir_file_name, O_CREAT | O_EXCL)),
+		free(dir_file_name));
+	free(dir_file_name);
+
+	//fill expelled file
+	int read_check;
+	size_t ex_file_size; size_t r_size = buf_size; size_t offset = 0;
+	read_buf(&msg->data, sizeof(size_t), &ex_file_size);
+	while((read_check = read_buf(&msg->data, r_size, buf)) == 0 &&
+		offset < ex_file_size)
+	{
+		write(ex_file_size, buf, r_size);
+		offset += r_size;
+		if(ex_file_size - offset < buf_size)
+			r_size = ex_file_size - offset;
+	}
+
+	close(ex_file);
+	if(offset < ex_file_size)
+		return -1;
+	else
+		return 0;
 }
