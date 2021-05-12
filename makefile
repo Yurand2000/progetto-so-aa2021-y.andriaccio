@@ -7,8 +7,9 @@ BUILD	= ./build
 BTEST	= $(BUILD)/tests
 BEXEC   = $(BUILD)/exec
 TESTD	= ./tests
+TESTDATAD = ./tests_data
 
-.PHONY: clean cleanobj all internal set_debug server client
+.PHONY: clean clear cleanobj all internal internal_build server server_debug client client_debug
 TARGET = server client
 
 SRC_FILE = $(wildcard $(SOURCE)/*.c)
@@ -26,6 +27,7 @@ client : $(BEXEC)/client.o $(OBJ_FILE)
 
 internal_build	:	CFLAGS += -g
 internal_build	:	$(OBJ_FILE) $(OUT_TEST)
+	cp -r -u $(TESTDATAD)/. $(BTEST)	
 
 internal	:	internal_build
 	echo
