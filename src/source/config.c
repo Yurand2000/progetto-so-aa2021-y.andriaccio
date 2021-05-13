@@ -2,17 +2,18 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #include "errset.h"
 
-#define CONFIG_VERSION "1.0"
-
 static int realloc_cfg_struct(cfg_t* cfg, size_t newsize)
 {
-	cfg_ky* temp;
-	REALLOCDO(temp, (cfg->cfgs), (sizeof(cfg_ky) * newsize), free_config_file(cfg));
+	cfg_kv* temp;
+	REALLOCDO(temp, (cfg->cfgs), (sizeof(cfg_kv) * newsize),
+		free_config_file(cfg));
 	cfg->cfgs = temp;
 	cfg->size = newsize;
+	return 0;
 }
 
 int read_config_file(const char* filename, cfg_t* out)
@@ -24,35 +25,43 @@ int read_config_file(const char* filename, cfg_t* out)
 	out->count = 0;
 	out->size = 0;
 
-	cfg_ky curr;
+	cfg_kv curr;
 	char* line = NULL; size_t line_size = 0;
-	char* token, saveptr, tempptr;
+	char* token, *token2, *saveptr, *saveptr2;
 
 	FILE* cfg = fopen(filename, "r");
 	PTRCHECK(cfg);
 
 	while(getline(&line, &line_size, cfg) > 0)
 	{
-		token = strtok_r(line, " = ", &saveptr);
-		if(token == NULL || strlen(token)+1 > CFG_MAX_KEY_SIZE) continue;
-		else strncpy(curr.key, token, CFG_MAX_KEY_SIZE);
+		token = strtok_r(line, "=", &saveptr);
+		if(token == NULL || *token == '\n' || strlen(token)+1 > CFG_MAX_KEY_SIZE)
+		{
+			ERRSETDO(EINVAL, { free_config_file(out); free(line); }, -1);
+		}
+		else
+		{
+			token2 = strtok_r(token, " ", &saveptr2);
+			strncpy(curr.key, token2, CFG_MAX_KEY_SIZE);
+		}
 
-		//this lines are problematic, I should change them.
-		tempptr = saveptr;
-		token = strtok_r(NULL, " ", &tempptr);
-		tempptr = saveptr;
-		token = strtok_r(NULL, "#", &tempptr);
-		token = strtok_r(NULL, "\n", &saveptr);
-
-		if(token == NULL || strlen(token)+1 > CFG_MAX_VALUE_SIZE) continue;
-		else strncpy(curr.value, token, CFG_MAX_VALUE_SIZE);
+		token = strtok_r(NULL, "#\n", &saveptr);
+		if(token == NULL || *token == '\n' || strlen(token)+1 > CFG_MAX_KEY_SIZE)
+		{
+			ERRSETDO(EINVAL, { free_config_file(out); free(line); }, -1);
+		}
+		else
+		{
+			token2 = strtok_r(token, " ", &saveptr2);
+			strncpy(curr.value, token2, CFG_MAX_VALUE_SIZE);
+		}
 
 		if(out->count >= out->size)
 			ERRCHECKDO(realloc_cfg_struct(out, out->size + 10),
 				{ free_config_file(out); free(line); } );
 
-		memcpy(out->cfgs[count], curr, sizeof(cfg_ky));
-		count++;
+		memcpy(&(out->cfgs[out->count]), &curr, sizeof(cfg_kv));
+		out->count++;
 	}
 	free(line);
 	ERRCHECKDO(realloc_cfg_struct(out, out->count), free_config_file(out));
@@ -72,4 +81,5 @@ const char* get_option(cfg_t* cfg, const char* key)
 int free_config_file(cfg_t* cfg)
 {
 	free(cfg->cfgs);
+	return 0;
 }

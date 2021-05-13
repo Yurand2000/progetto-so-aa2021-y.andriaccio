@@ -20,12 +20,11 @@ typedef struct config_file {
 /* reads a configuration file extracting all the possible options.
  * returns 0 on success or -1 on error, sets errno.
  * the current file structure is:
- * [key = value] without the brackets
- * empty lines are allowed and consequently skipped.
- * lines that do not conform the structures make the function return and error.
+ * [key=value] without the brackets
+ * empty lines are allowed and are consequently skipped.
+ * lines that do not conform the structures make the function return with an error.
  * line comments are also available, [#comment on the line] without the brackets.
- * keys might have whitespaces (it is preferred to not use them), but values must not.
- * never use the combination ' = ' in a key name otherwise you might get incorrect readings. */
+ * never use the symbol '=' in a key name otherwise you might get incorrect readings. */
 int read_config_file(const char* filename, cfg_t* out);
 
 const char* get_option(cfg_t* cfg, const char* key);

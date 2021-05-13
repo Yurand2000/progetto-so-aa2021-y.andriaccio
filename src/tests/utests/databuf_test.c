@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "../source/databuf.h"
+#include "databuf.h"
 
 void test_00();
 void test_01();

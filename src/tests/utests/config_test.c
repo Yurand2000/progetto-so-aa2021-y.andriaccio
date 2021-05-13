@@ -19,19 +19,19 @@ int main(int argc, const char* argv[])
 void test_00()
 {
 	cfg_t config;
-	if(read_config_file("", &config) != 0)
+	if(read_config_file("test_config_00.txt", &config) != 0)
 	{
-		printf("test01 fail\n");
+		printf("test00 fail\n");
 		fflush(stdout);
 		perror("read config file:");
 		return;
 	}
 
 	printf("Read config file:\n");
-	for(size_t i = 0; i < config->count; i++)
-		printf("K:V = %s:%s\n", config->cfgs[i].key, config->cfgs[i].value);
+	for(size_t i = 0; i < config.count; i++)
+		printf("K:V = %s:%s\n", config.cfgs[i].key, config.cfgs[i].value);
 	printf("test00 success!");
-	free_config_file(config);
+	free_config_file(&config);
 }
 
 void test_01()

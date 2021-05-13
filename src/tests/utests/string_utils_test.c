@@ -1,8 +1,8 @@
-#include "../source/string_utils.h"
+#include "utils/string_utils.h"
 
 #include <stdio.h>
 #include <assert.h>
-#include "../source/errset.h"
+#include "errset.h"
 
 void test00();
 void test01();
