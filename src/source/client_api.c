@@ -13,7 +13,7 @@
 #include "errset.h"
 #include "net_msg.h"
 #include "message_type.h"
-#include "client_api_macros.h"
+#include "net_msg_macros.h"
 
 //static variables
 /* the connection file (socket) is stored as a static variable hidden into this file. */
@@ -107,7 +107,6 @@ int openFile(const char* pathname, int flags)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
-
 	int check = CHECK_MSG_CNT(&msg, MESSAGE_OFILE_ACK);
 	destroy_message(&msg);
 	if(check)
@@ -115,6 +114,8 @@ int openFile(const char* pathname, int flags)
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_OP_SUCC))
 			return 0;
+		else if(HASFLAG(flags, MESSAGE_FILE_NPERM))
+			{ ERRSET(EPERM, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_EXISTS))
 			{ ERRSET(EEXIST, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
@@ -138,7 +139,7 @@ int readFile(const char* pathname, void** buf, size_t* size)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
-	if(CHECK_MSG_CNT(&msg, MESSAGE_READ_DATA))
+	if(CHECK_MSG_CNT(&msg, MESSAGE_RFILE_ACK))
 	{ 
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_OP_SUCC))
@@ -200,7 +201,7 @@ int writeFile(const char* pathname, const char* dirname)
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
 	int cachemiss = 0;
-	if(CHECK_MSG_CNT(&msg, MESSAGE_WRITE_ACK))
+	if(CHECK_MSG_CNT(&msg, MESSAGE_WFILE_ACK))
 	{
 
 		msg_t flags = GETFLAGS(msg.type);
@@ -248,7 +249,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);
 
 	int cachemiss = 0;
-	if(CHECK_MSG_CNT(&msg, MESSAGE_APPEND_ACK))
+	if(CHECK_MSG_CNT(&msg, MESSAGE_AFILE_ACK))
 	{
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_FILE_CHACEMISS))

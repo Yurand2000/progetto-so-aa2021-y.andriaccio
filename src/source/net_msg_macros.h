@@ -1,12 +1,13 @@
-#ifndef NETWORK_CLIENT_API_MACROS
-#define NETWORK_CLIENT_API_MACROS
+#ifndef NETWORK_MESSAGE_MACROS
+#define NETWORK_MESSAGE_MACROS
 
 #include "errset.h"
+#include "file.h"
 #include "net_msg.h"
 #include "message_type.h"
 
 #define UNIX_PATH_MAX 108
-#define FILE_PATH_MAX 256
+#define FILE_PATH_MAX FILE_NAME_MAX_SIZE
 
 /* sends the message given by m_ptr to the socket. deletes the message afterwards.
  * calls return -1 in case of error and sets errno. */
@@ -18,6 +19,7 @@
 /* reads to the message given by m_ptr from the socket. initializes the structure by itself.
  * calls return -1 in case of error, deletes the message and sets errno. */
 #define READ_FROM_SOCKET(sock, m_ptr) {\
+	create_message(m_ptr);\
 	ERRCHECKDO(read_msg(conn, m_ptr), destroy_message(m_ptr));\
 }
 

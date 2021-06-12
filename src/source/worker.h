@@ -1,7 +1,9 @@
 #ifndef SERVER_WORKER
 #define SERVER_WORKER
+#include "win32defs.h"
 
 #include <stdlib.h>
+
 #include "file.h"
 
 typedef struct worker_data {
@@ -18,3 +20,5 @@ void* worker_routine(void* args);
  * was an open with O_CREATE and O_LOCK flags and had success. */
 static int worker_do(int conn, file_t* files, size_t file_num,
 	char* lastop_writefile_pname);
+
+#endif

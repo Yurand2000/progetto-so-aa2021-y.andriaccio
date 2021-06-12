@@ -25,6 +25,11 @@ int openFile(const char* pathname, int flags);
  * given buffer. (Automatic reallocation of buf) */
 int readFile(const char* pathname, void** buf, size_t* size);
 
+/* Request to read N random files from the file storage, storing it into the
+ * given directory. if N <= 0, the server will send all files. 
+ * returns 0 or more files actually read, -1 on error and sets errno. */
+int readNFiles(int n, const char* dirname);
+
 /* Request to write a file into the server files. If the file expels some data,
  * it is returned to the caller. Valid only if the prevoius call was openFile
  * with O_CREATE as flag, same pathname, and returned with success. */

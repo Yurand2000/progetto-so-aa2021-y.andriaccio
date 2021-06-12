@@ -7,7 +7,7 @@
 
 #include "errset.h"
 
-#define REALLOC_SIZE 2
+#define REALLOC_MULTIPLIER 2
 
 //reallocating buffer for additional size, hidden function
 //sets errno on error, returns -1.
@@ -39,7 +39,7 @@ int read_buf(databuf* buf, size_t datalen, void* read_data)
 	if(datalen > buf->buf_size) ERRSET(ENOBUFS, -1);
 
 	buf->buf_size -= datalen;
-	memcpy(read_data, buf->buffer + buf->buf_size, datalen);
+	memcpy(read_data, (char*)buf->buffer + buf->buf_size, datalen);
 	//reallocation check? (if capacity > 2 * size then capacity /= 2)
 	//not implemented.
 	return 0;
@@ -51,11 +51,11 @@ int write_buf(databuf* buf, size_t datalen, const void* write_data)
 
 	if(buf->buf_cap - buf->buf_size < datalen)
 	{
-		if(realloc_buf(buf, buf->buf_cap * REALLOC_SIZE) == -1)
+		if(realloc_buf(buf, buf->buf_cap * REALLOC_MULTIPLIER) == -1)
 			return -1;
 	}
 
-	memcpy(buf->buffer + buf->buf_size, write_data, datalen);
+	memcpy((char*)buf->buffer + buf->buf_size, write_data, datalen);
 	buf->buf_size += datalen;
 	return 0;
 }

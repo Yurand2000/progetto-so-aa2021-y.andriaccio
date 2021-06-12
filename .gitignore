@@ -1,3 +1,9 @@
 ﻿build
 coverage
 tests.txt
+.vs
+progetto-so-aa2021-y.andriaccio.sln
+progetto-so-aa2021-y.andriaccio.VC.db
+progetto-so-aa2021-y.andriaccio.vcxproj
+progetto-so-aa2021-y.andriaccio.vcxproj.filters
+progetto-so-aa2021-y.andriaccio.vcxproj.user
