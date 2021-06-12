@@ -35,9 +35,19 @@ int read_config_file(const char* filename, cfg_t* out)
 	while(getline(&line, &line_size, cfg) > 0)
 	{
 		token = strtok_r(line, "=", &saveptr);
-		if(token == NULL || *token == '\n' || strlen(token)+1 > CFG_MAX_KEY_SIZE)
+		if(token == NULL || strlen(token)+1 > CFG_MAX_KEY_SIZE)
 		{
 			ERRSETDO(EINVAL, { free_config_file(out); free(line); }, -1);
+		}
+		else if(*(saveptr-1) == '\n')
+		{
+			while(*token == ' ' || *token == '\t')
+				token++;
+
+			if(*token == '\n' || *token == '#' || *token == '\0')
+				continue;
+			else
+				ERRSETDO(EINVAL, { free_config_file(out); free(line); }, -1);
 		}
 		else
 		{

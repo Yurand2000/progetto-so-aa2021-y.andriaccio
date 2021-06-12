@@ -28,9 +28,15 @@ OUT_TEST = $(patsubst %.o, %.out, $(OBJ_TEST))
 SRC_EXEC = $(call rwildcard, $(SEXEC), *.c)
 OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
-.PHONY: all debug clean clear cleanobj cleangcov
+.PHONY: all help debug clean clear cleanobj cleangcov
 .PHONY: server server_debug client client_debug
 .PHONY: utest utest_dirs
+
+help	:
+	@echo "available targets:"
+	@echo "all help debug clean/clear cleanobj cleangcov"
+	@echo "server server_debug client client_debug"
+	@echo "utest utest_run"
 
 TARGET = server client
 TARGET_DEBUG = server_debug client_debug
@@ -56,14 +62,15 @@ utest	: utest_dirs
 utest	: $(OBJ_FILE) $(OBJ_TEST) $(OUT_TEST)
 
 utest_run : utest
-	@echo "* * * Starting unit tests."
-	@$(patsubst %,%;,$(OUT_TEST))
+	@echo "* * * Starting unit tests; output saved to tests.txt"
+	@-rm tests.txt
+	@$(patsubst %,% >> tests.txt 2>> tests.txt;,$(OUT_TEST))
 	@echo "* * * Creating coverage files for unit tests."
 	@$(foreach i,$(SRC_FILE),$(call gcov_run,$(i)))
 	@echo "* * * Done! You can look at the coverage files into the ./coverage folder."
 	@echo "      The folder has the same structure as the src folder."
 
-gcov_run = mkdir -p $(call gcov_out_dir,$(1)); gcov $(1) -o $(call obj_from_src,$(1)) -t >> $(call gcov_out_file,$(1));
+gcov_run = mkdir -p $(call gcov_out_dir,$(1)); rm $(call gcov_out_file,$(1)); gcov $(1) -o $(call obj_from_src,$(1)) -t >> $(call gcov_out_file,$(1));
 gcov_out_file = $(subst $(SRCFLD),$(COVERAGE),$(subst .c,.gcov,$(1)))
 gcov_out_dir = $(dir $(call gcov_out_file,$(1)))
 

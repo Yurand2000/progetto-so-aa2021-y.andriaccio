@@ -95,13 +95,14 @@ int openFile(const char* pathname, int flags)
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
-	flags &= O_CREATE | O_LOCK;	//make sure there are only valid flags to send.
+	msg_t flg = MESSAGE_FLAG_NONE;
+	if(flags & O_CREATE) flg |= MESSAGE_OPEN_OCREATE;
+	if(flags & O_LOCK) flg |= MESSAGE_OPEN_OLOCK;
 
 	net_msg msg;
-	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_FILE);
+	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_FILE | flg);
 	write_buf(&msg.data, len, pathname);
 	write_buf(&msg.data, sizeof(size_t), &len);
-	write_buf(&msg.data, sizeof(int), &flags);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg);

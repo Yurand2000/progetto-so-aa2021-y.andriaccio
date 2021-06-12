@@ -9,8 +9,10 @@ void test01();
 
 int main(int argc, const char* argv[])
 {
+	printf("\nSTRING UTILS UNIT TESTING ====================\n");
 	test00();
 	test01();
+	printf("STRING UTILS UNIT TESTING ====================\n");
 }
 
 void test00()
@@ -76,7 +78,7 @@ void test00()
 	str_destr(&str1);
 	str_destr(&str2);
 
-	printf("test00 success\n");
+	printf("test00 success ====================\n");
 }
 
 void test01()

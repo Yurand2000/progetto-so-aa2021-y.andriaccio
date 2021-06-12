@@ -1,6 +1,9 @@
 #include "file.h"
 
-#include "../errset.h"
+#include <stdlib.h>
+#include <string.h>
+
+#include "errset.h"
 
 int init_file_struct(file_t* file)
 {
@@ -16,7 +19,8 @@ int reset_file_struct(file_t* file)
 {
 	if(file == NULL) ERRSET(EINVAL, -1);
 	free(file->data);
-	init_file_struct(file);	
+	init_file_struct(file);
+	return 0;
 }
 
 int create_file_struct(file_t* file, char* filename, int owner)
@@ -31,7 +35,7 @@ int valid_file_struct(file_t* file)
 {
 	if(file == NULL) ERRSET(EINVAL, -1);
 	if(file->owner >= OWNER_NULL) return 0;
-	else ERREST(ENOENT, -1);
+	else ERRSET(ENOENT, -1);
 }
 
 int read_file(file_t* file, int who, void** out_data, size_t* out_data_size)
@@ -55,7 +59,7 @@ int read_file(file_t* file, int who, void** out_data, size_t* out_data_size)
 int write_file(file_t* file, int who, const void* data, size_t data_size)
 {
 	if(file == NULL || who <= OWNER_NULL ||
-		data == NULL || data_size == NULL) ERRSET(EINVAL, -1);
+		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 	if(file->owner != OWNER_NULL && file->owner != who) ERRSET(EPERM, -1);
 	if(file->data_size != 0) ERRSET(EEXIST, -1);
 
@@ -68,7 +72,7 @@ int write_file(file_t* file, int who, const void* data, size_t data_size)
 int append_file(file_t* file, int who, const void* data, size_t data_size)
 {
 	if(file == NULL || who <= OWNER_NULL ||
-		data == NULL || data_size == NULL) ERRSET(EINVAL, -1);
+		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 	if(file->owner != OWNER_NULL && file->owner != who) ERRSET(EPERM, -1);
 	if(file->data_size == 0) ERRSET(ENOENT, -1);
 
@@ -77,7 +81,7 @@ int append_file(file_t* file, int who, const void* data, size_t data_size)
 	file->data = out;
 
 	memcpy(file->data + file->data_size, data, data_size);
-	file->data_size + data_size;
+	file->data_size += data_size;
 	return 0;
 }
 

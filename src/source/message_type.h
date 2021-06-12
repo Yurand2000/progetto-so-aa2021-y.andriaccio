@@ -69,4 +69,8 @@ typedef uint32_t msg_t;
 #define MESSAGE_UNLOCK_FILE CNT_MSG(9)
 #define MESSAGE_REMOVE_FILE CNT_MSG(10)
 
+//client side subcodes
+#define MESSAGE_OPEN_OCREATE FLAG(1)
+#define MESSAGE_OPEN_OLOCK FLAG(2)
+
 #endif

@@ -1,0 +1,7 @@
+config1 = ciao
+config2 = ciao_with_trailing_space   
+config4 = ciao_with_comment# here I come
+config5 = nice_comment #null config?
+config6 = nice comment will display only nice...
+config 7 space = error?
+config8 == asa = sad

@@ -18,7 +18,6 @@
 /* reads to the message given by m_ptr from the socket. initializes the structure by itself.
  * calls return -1 in case of error, deletes the message and sets errno. */
 #define READ_FROM_SOCKET(sock, m_ptr) {\
-	create_message(m_ptr);\
 	ERRCHECKDO(read_msg(conn, m_ptr), destroy_message(m_ptr));\
 }
 
