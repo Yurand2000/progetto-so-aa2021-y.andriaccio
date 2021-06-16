@@ -1,4 +1,5 @@
 #include "client_api.h"
+#include "win32defs.h"
 
 #include <unistd.h>
 #include <sys/stat.h>

@@ -4,8 +4,6 @@
 #include <string.h>
 
 #include "client.h"
-#include "../errset.h"
-#include "../request.h"
 
 static void print_help();
 

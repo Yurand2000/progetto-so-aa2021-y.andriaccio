@@ -1,10 +1,12 @@
 #include "net_msg.h"
+#include "win32defs.h"
 
 #include <unistd.h>
 #include <errno.h>
 
 #include "hash.h"
 #include "errset.h"
+#include "readn_writen.h"
 
 typedef struct
 {
@@ -90,7 +92,7 @@ static int write_msghead(int fileno, const net_msg* msg)
 	head.type = msg->type;
 	head.checksum = msg->checksum;
 	head.len = msg->data.buf_size;
-	ssize_t err = write(fileno, &head, sizeof(msg_header));
+	ssize_t err = writen(fileno, &head, sizeof(msg_header));
 
 	if(err == -1) return -1;
 	if(err != sizeof(msg_header)) ERRSET(EMSGSIZE, -1);
@@ -103,7 +105,7 @@ static int write_msghead(int fileno, const net_msg* msg)
 
 static int write_msgbody(int fileno, const net_msg* msg)
 {
-	ssize_t err = write(fileno, msg->data.buffer, msg->data.buf_size);
+	ssize_t err = writen(fileno, msg->data.buffer, msg->data.buf_size);
 	
 	if(err == -1) return -1;
 	if(err != msg->data.buf_size) ERRSET(EMSGSIZE, -1);
@@ -113,7 +115,7 @@ static int write_msgbody(int fileno, const net_msg* msg)
 static int read_msghead(int fileno, net_msg* msg, size_t* read_size)
 {
 	msg_header head;
-	ssize_t err = read(fileno, &head, sizeof(msg_header));
+	ssize_t err = readn(fileno, &head, sizeof(msg_header));
 	
 	if(err == -1) return -1;
 	if(err != sizeof(msg_header)) ERRSET(EMSGSIZE, -1);
@@ -132,7 +134,7 @@ static int read_msgbody(int fileno, net_msg* msg, size_t read_size)
 	if(resize_data_buffer(&msg->data, read_size) == -1)
 		return -1;
 	
-	ssize_t err = read(fileno, msg->data.buffer, read_size);
+	ssize_t err = readn(fileno, msg->data.buffer, read_size);
 	
 	if(err == -1) return -1;
 	if(err != read_size) ERRSET(EMSGSIZE, -1);

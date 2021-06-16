@@ -1,5 +1,7 @@
 #ifndef CLIENT_MACROS
 #define CLIENT_MACROS
+#include "../source/errset.h"
+#include "../source/request.h"
 
 #define ADD_REQUESTS(_type_) {\
 	req_t request;\

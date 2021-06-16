@@ -6,7 +6,7 @@
 
 #include "errset.h"
 
-static int realloc_cfg_struct(cfg_t* cfg, size_t newsize)
+static int realloc_cfg_struct(cfg_file_t* cfg, size_t newsize)
 {
 	cfg_kv* temp;
 	REALLOCDO(temp, (cfg->cfgs), (sizeof(cfg_kv) * newsize),
@@ -16,7 +16,7 @@ static int realloc_cfg_struct(cfg_t* cfg, size_t newsize)
 	return 0;
 }
 
-int read_config_file(const char* filename, cfg_t* out)
+int read_config_file(const char* filename, cfg_file_t* out)
 {
 	PTRCHECKERRSET(filename, EINVAL, -1);
 	PTRCHECKERRSET(out, EINVAL, -1);
@@ -80,7 +80,7 @@ int read_config_file(const char* filename, cfg_t* out)
 	else return 0;
 }
 
-const char* get_option(cfg_t* cfg, const char* key)
+const char* get_option(cfg_file_t const* cfg, const char* key)
 {
 	for(size_t i = 0; i < cfg->count; i++)
 		if(strcmp(cfg->cfgs[i].key, key) == 0)
@@ -88,7 +88,7 @@ const char* get_option(cfg_t* cfg, const char* key)
 	return NULL;
 }
 
-int free_config_file(cfg_t* cfg)
+int free_config_file(cfg_file_t* cfg)
 {
 	free(cfg->cfgs);
 	return 0;
