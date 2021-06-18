@@ -1,6 +1,5 @@
 #include "request.h"
 
-#include <unistd.h>
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,14 +12,19 @@ int init_request(req_t* req)
 	if(req == NULL) ERRSET(EINVAL, -1);
 
 	req->type = REQUEST_NULL;
-	req->filename = NULL;
+	req->n = 0;
+	req->stringdata = NULL;
+	req->stringdata_len = 0;
+	req->dir = NULL;
+	req->dir_len = 0;
 	return 0;
 }
 
 int destroy_request(req_t* req)
 {
 	if(req == NULL) ERRSET(EINVAL, -1);
-	free(req->filename);
+	free(req->stringdata);
+	free(req->dir);
 	return 0;
 }
 
@@ -46,7 +50,11 @@ int add_request(req_t newreq, req_t** reqs, size_t* curr_reqs, size_t* reqs_size
 
 	init_request( &((*reqs)[*curr_reqs]) );
 	((*reqs)[*curr_reqs]).type = newreq.type;
-	((*reqs)[*curr_reqs]).filename = newreq.filename;
+	((*reqs)[*curr_reqs]).n = newreq.n;
+	((*reqs)[*curr_reqs]).stringdata = newreq.stringdata;
+	((*reqs)[*curr_reqs]).stringdata_len = newreq.stringdata_len;
+	((*reqs)[*curr_reqs]).dir = newreq.dir;
+	((*reqs)[*curr_reqs]).dir_len = newreq.dir_len;
 	(*curr_reqs)++;
 	return 0;
 }

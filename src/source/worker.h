@@ -7,12 +7,17 @@
 #include "file.h"
 #include "log.h"
 
+#define WORKER_IDLE 0
+#define WORKER_DO 1
+#define WORKER_DONE 2
+
 typedef struct worker_data {
 	pthread_mutex_t thread_mux;
 	pthread_cond_t thread_cond;
 	int do_work; //condition variable condition check
 	int exit;
 	int work_conn;
+	int new_conn;
 	char* work_conn_lastop;
 
 	file_t* files;
@@ -22,8 +27,8 @@ typedef struct worker_data {
 	long max_storage;
 	int max_files;
 	char cache_miss_algorithm;
-	long current_storage;
-	int current_files;
+	long* current_storage;
+	int* current_files;
 	pthread_mutex_t* state_mux;
 } worker_data;
 

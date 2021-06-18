@@ -12,6 +12,10 @@
 #define MAX_STORAGE_FILES 1024 * 1024
 #define MAX_CONNECTIONS 50
 
+#define ALGO_FIFO 0
+#define ALGO_LRU 1
+#define ALGO_LFU 2
+
 typedef struct config_data
 {
 	char socket_file[FILENAME_MAX_SIZE];
@@ -20,6 +24,7 @@ typedef struct config_data
 	long storage_capacity; //in bytes
 	int max_files;
 	int max_connections;
+	char algorithm;
 } cfg_t;
 
 void command_line_parsing(int argc, char* argv[], cfg_t* config_data);

@@ -30,7 +30,7 @@ OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
 .PHONY: all help debug clean clear cleanobj cleangcov
 .PHONY: server server_debug client client_debug
-.PHONY: utest utest_dirs
+.PHONY: utest utest_dirs test1 test2 test3
 
 help	:
 	@echo "available targets:"
@@ -52,6 +52,19 @@ client	: $(BLDEXE)/client.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $(BEXEC)/$@.out
 client_debug : CFLAGS += $(CDEBFLAGS)
 client_debug : client
+
+test1 :
+  @valgrind --leak-check=full $(BEXEC)/server.out -c ./tests/test1/test1.cfg &
+  @./tests/test1/client.sh
+  @fg
+test2 :
+  @$(BEXEC)/server.out -c ./tests/test2/test2.cfg &
+  @./tests/test2/client.sh
+  @fg
+test3 :
+  @$(BEXEC)/server.out -c ./tests/test3/test3.cfg &
+  @./tests/test3/client.sh
+  @fg
 
 #UNIT TESTS
 utest_dirs :

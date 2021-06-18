@@ -2,14 +2,16 @@
 #define CLIENT_REQUEST
 
 #define REQUEST_NULL 0
-#define REQUEST_OPEN 1
-#define REQUEST_CREATE_LOCK 2
-#define REQUEST_CLOSE 3
-#define REQUEST_READ 4
-#define REQUEST_WRITE 5
-#define REQUEST_LOCK 6
-#define REQUEST_UNLOCK 7
-#define REQUEST_REMOVE 8
+#define REQUEST_READ 1
+#define REQUEST_READN 2
+#define REQUEST_WRITE 3
+#define REQUEST_WRITE_DIR 4
+#define REQUEST_LOCK 5
+#define REQUEST_UNLOCK 6
+#define REQUEST_REMOVE 7
+#define REQUEST_OPEN 10
+#define REQUEST_CREATE_LOCK 20
+#define REQUEST_CLOSE 30
 
 #include <stdlib.h>
 
@@ -19,7 +21,11 @@
 
 typedef struct request {
 	int type;
-	char* filename;
+	int n;
+	char* stringdata;
+	size_t stringdata_len;
+	char* dir;
+	size_t dir_len;
 } req_t;
 
 //init the request structure, returns 0 on success, -1 on failure and sets errno.

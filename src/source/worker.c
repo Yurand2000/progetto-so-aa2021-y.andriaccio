@@ -19,7 +19,7 @@
 static int file_exists(file_t const* files, size_t file_num, const char* filename);
 static int get_no_file(file_t const* files, size_t file_num);
 static void read_file_name(net_msg* msg, char** file_name, size_t* file_size);
-static int worker_do(int conn, file_t* files, size_t file_num,
+static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	log_t* log, char* lastop_writefile_pname);
 
 static int evict_FIFO(file_t* files, size_t file_num, size_t* last_evicted,
@@ -35,7 +35,7 @@ void* worker_routine(void* args)
 	while(1)
 	{
 		ERRCK(pthread_mutex_lock(data->thread_mux));
-		while (data->do_work == 0)
+		while (data->do_work != WORKER_DO)
 			ERRCK(pthread_cond_wait(data->thread_cond, data->thread_mux));
 
 		if (data->exit)
@@ -46,58 +46,86 @@ void* worker_routine(void* args)
 		else
 		{
 			int conn = data->work_conn;
+			int newconn = data->new_conn;
 			char* conn_op = data->work_conn_lastop;
-			data->do_work = 0;
 			ERRCK(pthread_mutex_unlock(data->thread_mux));
+			ERRCK(worker_do(&conn, &newconn, data->files, data->file_num, data->log, conn_op));
 
-			ERRCK(worker_do(conn, data->files, data->file_num, data->log, conn_op));
+			ERRCK(pthread_mutex_lock(data->thread_mux));
+			data->work_conn = conn;
+			data->new_conn = newconn;
+			data->do_work = WORKER_DONE;
+			ERRCK(pthread_mutex_unlock(data->thread_mux));
+			ERRCK(raise(SIGUSR1));	//tell the main thread it has finished working
 		}
 	}
 }
 
 /* this is an internal function used by the worker to handle a request.
-* lastop_writefile_pname contains the pathname of the file if the last operation
-* was an open with O_CREATE and O_LOCK flags and had success. */
-static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname)
+ * when returning, the values of conn and newconn tell the main thread if a
+ * connection has been added or dropped.
+ * lastop_writefile_pname contains the pathname of the file if the last operation
+ * was an open with O_CREATE and O_LOCK flags and had success. */
+static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname)
 {
-	//read message from connection	
-	net_msg in_msg; char log_msg[FILENAME_MAX_SIZE];
-	READ_FROM_SOCKET(conn, &in_msg);
+	net_msg in_msg, out_msg; char log_msg[FILENAME_MAX_SIZE];
+
+	if (*conn == *newconn)	//this is the acceptor
+	{
+		ERRCHECK((*newconn = accept(*conn, NULL, 0)));
+
+		//waiting for a message from the new connection, otherwise drop it.
+		//need a timeout!!
+		READ_FROM_SOCKET(*conn, &in_msg);
+		msg_t flags = GETFLAGS(in_msg.type);
+
+		//OPEN CONNECTION -----------------------------------------------------
+		if (ISCLIENT(in_msg.type) && in_msg.type & MESSAGE_OPEN_CONN)
+		{
+			out_msg.type = MESSAGE_OCONN_ACK;
+
+			//logging
+			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s", *newconn, STRING_OPEN_CONN);
+			print_line_to_log_file(log, log_msg);
+			return 0;
+		}
+		else
+		{
+			*newconn = -1;
+
+			snprintf(log_msg, FILENAME_MAX_SIZE, "Unknown client tried to connect.");
+			print_line_to_log_file(log, log_msg);
+			return 0;
+		}
+	}
+
+	//read message from connection
+	READ_FROM_SOCKET(*conn, &in_msg);
 	msg_t flags = GETFLAGS(in_msg.type);
 
 	if(!ISCLIENT(in_msg.type)) ERRSETDO(EBADMSG, destroy_message(&in_msg), -1);
 
 	//switch based on request type
-	net_msg out_msg;
 	create_message(&out_msg);
 
-	//OPEN CONNECTION ---------------------------------------------------------
-	if(in_msg.type & MESSAGE_OPEN_CONN)
-	{
-		out_msg.type = MESSAGE_OCONN_ACK;
-
-		//this shall be implemented on connection request: the first message
-		//should always be OPEN CONNECTION!
-
-		//logging
-		snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s", conn, STRING_OPEN_CONN);
-		print_line_to_log_file(log, log_msg);
-	}
-
 	//CLOSE CONNECTION --------------------------------------------------------
-	else if(in_msg.type & MESSAGE_CLOSE_CONN)
+	if(in_msg.type & MESSAGE_CLOSE_CONN)
 	{
 		out_msg.type = MESSAGE_CCONN_ACK;
 
 		//unown any locked files and close them
 		for (size_t i = 0; i < file_num; i++)
 		{
-			if (is_locked_file(&files[i], conn) == 0)
-				close_file(&files[i], conn);
+			if (is_locked_file(&files[i], *conn) == 0)
+				close_file(&files[i], *conn, );
 		}
 
+		//close the connection
+		close(*conn);
+		*conn = -1;
+
 		//logging
-		snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s", conn, STRING_CLOSE_CONN);
+		snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s", *conn, STRING_CLOSE_CONN);
 		print_line_to_log_file(log, log_msg);
 	}
 
@@ -113,17 +141,17 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 		if (fex == -1 && errno != ENOENT)
 		{
 			//file error!
-			SEND_TO_SOCKET(conn, &out_msg);
+			SEND_TO_SOCKET(*conn, &out_msg);
 			destroy_message(&in_msg);
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File error.", conn, STRING_OPEN_FILE, name);
+				"File error.", *conn, STRING_OPEN_FILE, name);
 			print_line_to_log_file(log, log_msg);
 			return -1;
 		}
 
-		int owner = (flags & MESSAGE_OPEN_OLOCK) ? conn : OWNER_NULL;	//want to lock?
+		int owner = (flags & MESSAGE_OPEN_OLOCK) ? *conn : OWNER_NULL;	//want to lock?
 		if(flags & MESSAGE_OPEN_OCREATE)	//create file
 		{
 			if (fex == -1 && errno == ENOENT)
@@ -136,7 +164,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Too many open files.", conn, STRING_OPEN_FILE, name);
+						"Too many open files.", *conn, STRING_OPEN_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 				else
@@ -145,12 +173,12 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 					if (res == -1)
 					{
 						//file error!
-						SEND_TO_SOCKET(conn, &out_msg);
+						SEND_TO_SOCKET(*conn, &out_msg);
 						destroy_message(&in_msg);
 
 						//logging
 						snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-							"File error.", conn, STRING_OPEN_FILE, name);
+							"File error.", *conn, STRING_OPEN_FILE, name);
 						print_line_to_log_file(log, log_msg);
 						return -1;
 					}
@@ -162,7 +190,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Success.", conn, STRING_OPEN_FILE, name);
+						"Success.", *conn, STRING_OPEN_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 			}
@@ -173,7 +201,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"File exists.", conn, STRING_OPEN_FILE, name);
+					"File exists.", *conn, STRING_OPEN_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 		}
@@ -189,7 +217,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Success.", conn, STRING_OPEN_FILE, name);
+						"Success.", *conn, STRING_OPEN_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 				else if(errno == EPERM)
@@ -198,18 +226,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Permission denied.", conn, STRING_OPEN_FILE, name);
+						"Permission denied.", *conn, STRING_OPEN_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 				else
 				{
 					//file error!
-					SEND_TO_SOCKET(conn, &out_msg);
+					SEND_TO_SOCKET(*conn, &out_msg);
 					destroy_message(&in_msg);
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"File error.", conn, STRING_OPEN_FILE, name);
+						"File error.", *conn, STRING_OPEN_FILE, name);
 					print_line_to_log_file(log, log_msg);
 					return -1;
 				}
@@ -221,7 +249,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"File doesn't exist.", conn, STRING_OPEN_FILE, name);
+					"File doesn't exist.", *conn, STRING_OPEN_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 		}
@@ -238,14 +266,14 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 		int fex = file_exists(files, file_num, name);
 		if (fex >= 0)
 		{
-			int lck = close_file(&files[fex], conn);
+			int lck = close_file(&files[fex], *conn);
 			if (lck == 0)
 			{
 				out_msg.type |= MESSAGE_OP_SUCC;
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Success.", conn, STRING_CLOSE_FILE, name);
+					"Success.", *conn, STRING_CLOSE_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 			else if (errno == EPERM)
@@ -254,18 +282,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Permission denied.", conn, STRING_CLOSE_FILE, name);
+					"Permission denied.", *conn, STRING_CLOSE_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 			else
 			{
 				//file error!
-				SEND_TO_SOCKET(conn, &out_msg);
+				SEND_TO_SOCKET(*conn, &out_msg);
 				destroy_message(&in_msg);
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"File error.", conn, STRING_CLOSE_FILE, name);
+					"File error.", *conn, STRING_CLOSE_FILE, name);
 				print_line_to_log_file(log, log_msg);
 				return -1;
 			}
@@ -276,18 +304,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File doesnt not exist.", conn, STRING_CLOSE_FILE, name);
+				"File doesnt not exist.", *conn, STRING_CLOSE_FILE, name);
 			print_line_to_log_file(log, log_msg);
 		}
 		else
 		{
 			//file error!
-			SEND_TO_SOCKET(conn, &out_msg);
+			SEND_TO_SOCKET(*conn, &out_msg);
 			destroy_message(&in_msg);
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File error.", conn, STRING_CLOSE_FILE, name);
+				"File error.", *conn, STRING_CLOSE_FILE, name);
 			print_line_to_log_file(log, log_msg);
 			return -1;
 		}
@@ -320,14 +348,14 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 		int fex = file_exists(files, file_num, name);
 		if (fex >= 0)
 		{
-			int lck = lock_file(&files[fex], conn);
+			int lck = lock_file(&files[fex], *conn);
 			if (lck == 0)
 			{
 				out_msg.type |= MESSAGE_OP_SUCC;
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Success.", conn, STRING_LOCK_FILE, name);
+					"Success.", *conn, STRING_LOCK_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 			else if (errno == EPERM)
@@ -336,7 +364,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Permission denied.", conn, STRING_LOCK_FILE, name);
+					"Permission denied.", *conn, STRING_LOCK_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 		}
@@ -346,18 +374,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File doesn't exist.", conn, STRING_LOCK_FILE, name);
+				"File doesn't exist.", *conn, STRING_LOCK_FILE, name);
 			print_line_to_log_file(log, log_msg);
 		}
 		else
 		{
 			//file error!
-			SEND_TO_SOCKET(conn, &out_msg);
+			SEND_TO_SOCKET(*conn, &out_msg);
 			destroy_message(&in_msg);
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File error.", conn, STRING_LOCK_FILE, name);
+				"File error.", *conn, STRING_LOCK_FILE, name);
 			print_line_to_log_file(log, log_msg);
 			return -1;
 		}
@@ -373,14 +401,14 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 		int fex = file_exists(files, file_num, name);
 		if (fex >= 0)
 		{
-			int lck = unlock_file(&files[fex], conn);
+			int lck = unlock_file(&files[fex], *conn);
 			if (lck == 0)
 			{
 				out_msg.type |= MESSAGE_OP_SUCC;
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Success.", conn, STRING_UNLOCK_FILE, name);
+					"Success.", *conn, STRING_UNLOCK_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 			else if (errno == EPERM)
@@ -389,7 +417,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 				//logging
 				snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-					"Permission denied.", conn, STRING_UNLOCK_FILE, name);
+					"Permission denied.", *conn, STRING_UNLOCK_FILE, name);
 				print_line_to_log_file(log, log_msg);
 			}
 		}
@@ -399,18 +427,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File doesn't exist.", conn, STRING_UNLOCK_FILE, name);
+				"File doesn't exist.", *conn, STRING_UNLOCK_FILE, name);
 			print_line_to_log_file(log, log_msg);
 		}
 		else
 		{
 			//file error!
-			SEND_TO_SOCKET(conn, &out_msg);
+			SEND_TO_SOCKET(*conn, &out_msg);
 			destroy_message(&in_msg);
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File error.", conn, STRING_UNLOCK_FILE, name);
+				"File error.", *conn, STRING_UNLOCK_FILE, name);
 			print_line_to_log_file(log, log_msg);
 			return -1;
 		}
@@ -430,14 +458,14 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 				out_msg.type |= MESSAGE_FILE_NLOCK;
 			else
 			{
-				int lck = remove_file(&files[fex], conn);
+				int lck = remove_file(&files[fex], *conn);
 				if (lck == 0)
 				{
 					out_msg.type |= MESSAGE_OP_SUCC;
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Success.", conn, STRING_REMOVE_FILE, name);
+						"Success.", *conn, STRING_REMOVE_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 				else if (errno == EPERM)
@@ -446,7 +474,7 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 					//logging
 					snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-						"Permission denied.", conn, STRING_REMOVE_FILE, name);
+						"Permission denied.", *conn, STRING_REMOVE_FILE, name);
 					print_line_to_log_file(log, log_msg);
 				}
 			}
@@ -457,18 +485,18 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File doesn't exist.", conn, STRING_REMOVE_FILE, name);
+				"File doesn't exist.", *conn, STRING_REMOVE_FILE, name);
 			print_line_to_log_file(log, log_msg);
 		}
 		else
 		{
 			//file error!
-			SEND_TO_SOCKET(conn, &out_msg);
+			SEND_TO_SOCKET(*conn, &out_msg);
 			destroy_message(&in_msg);
 
 			//logging
 			snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Op: %s; File: %s;"
-				"File error.", conn, STRING_REMOVE_FILE, name);
+				"File error.", *conn, STRING_REMOVE_FILE, name);
 			print_line_to_log_file(log, log_msg);
 			return -1;
 		}
@@ -478,12 +506,12 @@ static int worker_do(int conn, file_t* files, size_t file_num, log_t* log, char*
 	else
 	{
 		out_msg.type = MESSAGE_NULL;
-		SEND_TO_SOCKET(conn, &out_msg);
-		destroy_message(&in_msg);
-		ERRSET(EBADMSG, -1);
+
+		snprintf(log_msg, FILENAME_MAX_SIZE, "Client: %d; Unkown Operation.", *conn);
+		print_line_to_log_file(log, log_msg);
 	}
 
-	SEND_TO_SOCKET(conn, &out_msg);
+	SEND_TO_SOCKET(*conn, &out_msg);
 	destroy_message(&in_msg);
 	return 0;
 }
