@@ -415,7 +415,7 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 		{
 			expand_dir_to_files(entry->d_name, max, retdir, retdir_size,
 				reqs, curr_reqs, reqs_size,
-				count_ptr, currdir, currdir_size);
+				count_ptr, abspath, abspath_size);
 		}
 		entry = readdir(dir_ptr);
 	}
