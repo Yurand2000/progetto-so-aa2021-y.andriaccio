@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs_exp; i++)
 	{
-		printf("Request: %lu; type: %d; n: %d;", i, reqs_exp[i].type, reqs[i].n);
+		printf("Request: %lu; type: %d; n: %d;", i, reqs_exp[i].type, reqs_exp[i].n);
 		if (reqs_exp[i].stringdata != NULL) printf(" files: %s;", reqs_exp[i].stringdata);
 		if (reqs_exp[i].dir != NULL) printf(" dir: %s;", reqs_exp[i].dir);
 		printf("\n");
@@ -365,7 +365,7 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	}
 	else
 	{
-		abspath_size += currdir_size;
+		abspath_size += currdir_size + 1;
 		MALLOC(abspath, sizeof(char) * abspath_size);
 		strncpy(abspath, currdir, currdir_size);
 		strncpy(abspath + currdir_size, dirname, len);
