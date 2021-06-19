@@ -365,10 +365,11 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	}
 	else
 	{
-		abspath_size += currdir_size + 1;
+		abspath_size += currdir_size;
 		MALLOC(abspath, sizeof(char) * abspath_size);
 		strncpy(abspath, currdir, currdir_size);
 		strncpy(abspath + currdir_size, dirname, len);
+		abspath[abspath_size] = '\0';
 	}
 
 	//add trailing slash if necessary
