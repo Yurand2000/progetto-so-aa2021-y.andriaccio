@@ -22,8 +22,14 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
 	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
 	int* count_ptr, const char* currdir, size_t currdir_size);
+
+//split multifile requests and changes local to absolute path
 static int split_and_fix_request_files(req_t* req, req_t** reqs,
 	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size);
+
+//add open/create and close request after each operation
+static int add_open_create_requests(req_t* req, req_t** reqs,
+	size_t* curr_reqs, size_t* reqs_size);
 
 int main(int argc, char* argv[])
 {
@@ -117,7 +123,10 @@ int main(int argc, char* argv[])
 	//add open/create and close requests. -------------------------------------
 	curr_reqs = 0;	//using the old reqs array, but as if it was empty.
 					//all old memory has already been cleared.
-#ifdef OPEN_CREATE_REQS
+
+	for (size_t i = 0; i < curr_reqs_exp; i++)
+		add_open_create_requests(&reqs_exp[i], &reqs, &curr_reqs, &reqs_size);
+
 	free(reqs_exp);
 
 	//print all requests for testing
@@ -129,7 +138,7 @@ int main(int argc, char* argv[])
 		printf("\n");
 	}
 	printf("\n\n-----------------------------------------------------------\n");
-#endif
+
 	//call the client api -----------------------------------------------------
 #ifdef CLIENT_API_ENABLE
 #define REQ_FAIL(res) if (res == -1) { perror("Request failure: "); }
@@ -360,13 +369,13 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	abspath_size = len = strlen(dirname);
 	if (dirname[0] == '/')
 	{
-		MALLOC(abspath, sizeof(char) * abspath_size);
+		MALLOC(abspath, sizeof(char) * abspath_size + 1);
 		strncpy(abspath, dirname, abspath_size);
 	}
 	else
 	{
 		abspath_size += currdir_size;
-		MALLOC(abspath, sizeof(char) * abspath_size);
+		MALLOC(abspath, sizeof(char) * abspath_size + 1);
 		strncpy(abspath, currdir, currdir_size);
 		strncpy(abspath + currdir_size, dirname, len);
 		abspath[abspath_size] = '\0';
@@ -459,5 +468,41 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 		token = strtok_r(NULL, ",", &saveptr);
 	}
 
+	return 0;
+}
+
+static int add_open_create_requests(req_t* req, req_t** reqs,
+	size_t* curr_reqs, size_t* reqs_size)
+{
+	req_t temp;
+	init_request(&temp);
+	switch (req->type)
+	{
+	case REQUEST_READ:
+		temp.type = REQUEST_OPEN;
+		break;
+	case REQUEST_WRITE:
+		temp.type = REQUEST_CREATE_LOCK;
+		break;
+	case REQUEST_REMOVE:
+		temp.type = REQUEST_OPEN_LOCK;
+		break;
+	default:
+		add_request(*req, &reqs, &curr_reqs, &reqs_size);
+		return 0;
+	}
+
+	temp.stringdata_len = req->stringdata_len;
+	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+	add_request(temp, &reqs, &curr_reqs, &reqs_size);
+
+	add_request(*req, &reqs, &curr_reqs, &reqs_size);
+
+	temp.type = REQUEST_CLOSE;
+	temp.stringdata_len = req->stringdata_len;
+	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+	add_request(temp, &reqs, &curr_reqs, &reqs_size);
 	return 0;
 }
