@@ -29,8 +29,16 @@ int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
 	char currdir[FILENAME_MAX]; size_t currdir_size;
-	PERRCHECK(getcwd(currdir, FILENAME_MAX) == NULL, "CWD Unexpected error: ");
+	PERRCHECK(getcwd(currdir, FILENAME_MAX - 1) == NULL, "CWD Unexpected error: ");
 	currdir_size = strlen(currdir);
+
+	//add trailing / if necessary
+	if (currdir[currdir_size - 1] != '/')
+	{
+		currdir[currdir_size] = '/';
+		currdir[currdir_size + 1] = '\0';
+		currdir_size++;
+	}
 
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
@@ -358,17 +366,9 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	else
 	{
 		abspath_size += currdir_size;
-		if (currdir[currdir_size - 1] != '/') abspath_size++;
-
 		MALLOC(abspath, sizeof(char) * abspath_size);
 		strncpy(abspath, currdir, currdir_size);
-		if (currdir[currdir_size - 1] != '/')
-		{
-			abspath[currdir_size] = '/';
-			strncpy(abspath + currdir_size + 1, dirname, len);
-		}
-		else
-			strncpy(abspath + currdir_size, dirname, len);
+		strncpy(abspath + currdir_size, dirname, len);
 	}
 
 	//add trailing slash if necessary
