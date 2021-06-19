@@ -28,7 +28,7 @@ int create_message(net_msg* msg)
 {
 	if(msg == NULL) ERRSET(EINVAL, -1);
 
-	msg->type = MESSAGE_NULL;
+	msg->type = NET_MESSAGE_NULL;
 	create_data_buffer(&(msg->data));
 	msg->checksum = 0;
 	return 0;

@@ -12,7 +12,7 @@
 /* sends the message given by m_ptr to the socket. deletes the message afterwards.
  * calls return -1 in case of error and sets errno. */
 #define SEND_TO_SOCKET(sock, m_ptr) {\
-	ERRCHECKDO(write_msg(conn, m_ptr), destroy_message(m_ptr));\
+	ERRCHECKDO(write_msg(sock, m_ptr), destroy_message(m_ptr));\
 	destroy_message(m_ptr);\
 }
 
@@ -20,7 +20,7 @@
  * calls return -1 in case of error, deletes the message and sets errno. */
 #define READ_FROM_SOCKET(sock, m_ptr) {\
 	create_message(m_ptr);\
-	ERRCHECKDO(read_msg(conn, m_ptr), destroy_message(m_ptr));\
+	ERRCHECKDO(read_msg(sock, m_ptr), destroy_message(m_ptr));\
 }
 
 /* sends the message given by m_out_ptr to the socket and reads (blocking)

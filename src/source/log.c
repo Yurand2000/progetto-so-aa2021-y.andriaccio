@@ -50,6 +50,7 @@ int reset_log(log_t* log)
 	fclose(logfile);
 
 	UNLOCK(&log->mux);
+	return 0;
 }
 
 int print_line_to_log_file(log_t* log, char* line)
@@ -71,4 +72,5 @@ int print_line_to_log_file(log_t* log, char* line)
 	fclose(logfile);
 
 	UNLOCK(&log->mux);
+	return 0;
 }

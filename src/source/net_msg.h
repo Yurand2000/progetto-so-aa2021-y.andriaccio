@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "databuf.h"
 
-#define MESSAGE_NULL (uint32_t)(0)
+#define NET_MESSAGE_NULL (uint32_t)(0)
 
 typedef struct network_message {
 	uint32_t type;

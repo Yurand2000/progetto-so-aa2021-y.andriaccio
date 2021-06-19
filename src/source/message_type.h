@@ -22,8 +22,8 @@ typedef uint32_t msg_t;
 #define MESSAGE_SERVER_MASK ((msg_t) (255 << 24) )
 #define MESSAGE_CLIENT_MASK ((msg_t) (255 << 16) )
 #define MESSAGE_FLAG_MASK ((msg_t) ((255 << 8) + 255) )
-#define SRV_MSG(num) ((msg_t) num << 24 ) | MESSAGE_CLIENT_NULL
-#define CNT_MSG(num) ((msg_t) num << 16 ) | MESSAGE_SERVER_NULL
+#define SRV_MSG(num) (((msg_t) num << 24 ) | MESSAGE_CLIENT_NULL)
+#define CNT_MSG(num) (((msg_t) num << 16 ) | MESSAGE_SERVER_NULL)
 #define FLAG(num) ((msg_t) 1 << num)
 
 #define ISSERVER(msg) ((msg & MESSAGE_CLIENT_MASK) == MESSAGE_CLIENT_NULL)

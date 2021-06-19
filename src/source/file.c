@@ -49,7 +49,7 @@ int reset_file_struct(file_t* file)
 	return 0;
 }
 
-int create_file_struct(file_t* file, char* filename, int owner)
+int create_file_struct(file_t* file, char const* filename, int owner)
 {
 	if(file == NULL || filename == NULL || owner < OWNER_NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -62,7 +62,7 @@ int create_file_struct(file_t* file, char* filename, int owner)
 	return 0;
 }
 
-int valid_file_struct(file_t const* file)
+int valid_file_struct(file_t* file)
 {
 	if(file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -73,7 +73,7 @@ int valid_file_struct(file_t const* file)
 	else return 1;
 }
 
-int check_file_name(file_t const* file, char const* name)
+int check_file_name(file_t* file, char const* name)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -84,7 +84,7 @@ int check_file_name(file_t const* file, char const* name)
 	else return 1;
 }
 
-int is_open_file(file_t const* file)
+int is_open_file(file_t* file)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -95,7 +95,7 @@ int is_open_file(file_t const* file)
 	else return 0;
 }
 
-int is_locked_file(file_t const* file, int who)
+int is_locked_file(file_t* file, int who)
 {
 	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -106,7 +106,7 @@ int is_locked_file(file_t const* file, int who)
 	else return 1;
 }
 
-int get_size(file_t const* file, size_t* data_size)
+int get_size(file_t* file, size_t* data_size)
 {
 	if (file == NULL || data_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -115,7 +115,7 @@ int get_size(file_t const* file, size_t* data_size)
 	return 0;
 }
 
-int get_usage_data(file_t const* file, time_t* fifo, int* lfu, char* lru)
+int get_usage_data(file_t* file, time_t* fifo, int* lfu, char* lru)
 {
 	if (file == NULL || (fifo == NULL && lfu == NULL && lru == NULL)) ERRSET(EINVAL, -1);
 	LOCK(file);

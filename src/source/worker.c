@@ -1,6 +1,7 @@
 #include "worker.h"
 
 #include <unistd.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
+#include <limits.h>
 
 #include "errset.h"
 #include "net_msg.h"
@@ -18,7 +20,7 @@
 
 static int file_exists(file_t const* files, size_t file_num, const char* filename);
 static int get_no_file(file_t const* files, size_t file_num);
-static void read_file_name(net_msg* msg, char** file_name, size_t* file_size);
+static int read_file_name(net_msg* msg, char** file_name, size_t* file_size);
 static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	log_t* log, char* lastop_writefile_pname);
 
@@ -34,13 +36,13 @@ void* worker_routine(void* args)
 	worker_data* data = (worker_data*)args;
 	while(1)
 	{
-		ERRCK(pthread_mutex_lock(data->thread_mux));
+		ERRCK(pthread_mutex_lock(&data->thread_mux));
 		while (data->do_work != WORKER_DO)
-			ERRCK(pthread_cond_wait(data->thread_cond, data->thread_mux));
+			ERRCK(pthread_cond_wait(&data->thread_cond, &data->thread_mux));
 
 		if (data->exit)
 		{
-			ERRCK(pthread_mutex_unlock(data->thread_mux));
+			ERRCK(pthread_mutex_unlock(&data->thread_mux));
 			return (void*)0;
 		}
 		else
@@ -48,14 +50,14 @@ void* worker_routine(void* args)
 			int conn = data->work_conn;
 			int newconn = data->new_conn;
 			char* conn_op = data->work_conn_lastop;
-			ERRCK(pthread_mutex_unlock(data->thread_mux));
+			ERRCK(pthread_mutex_unlock(&data->thread_mux));
 			ERRCK(worker_do(&conn, &newconn, data->files, data->file_num, data->log, conn_op));
 
-			ERRCK(pthread_mutex_lock(data->thread_mux));
+			ERRCK(pthread_mutex_lock(&data->thread_mux));
 			data->work_conn = conn;
 			data->new_conn = newconn;
 			data->do_work = WORKER_DONE;
-			ERRCK(pthread_mutex_unlock(data->thread_mux));
+			ERRCK(pthread_mutex_unlock(&data->thread_mux));
 			ERRCK(raise(SIGUSR1));	//tell the main thread it has finished working
 		}
 	}
@@ -80,7 +82,7 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 		msg_t flags = GETFLAGS(in_msg.type);
 
 		//OPEN CONNECTION -----------------------------------------------------
-		if (ISCLIENT(in_msg.type) && in_msg.type & MESSAGE_OPEN_CONN)
+		if (ISCLIENT(in_msg.type) && (in_msg.type & MESSAGE_OPEN_CONN))
 		{
 			out_msg.type = MESSAGE_OCONN_ACK;
 
@@ -114,11 +116,11 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 		out_msg.type = MESSAGE_CCONN_ACK;
 
 		//unown any locked files and close them
-		for (size_t i = 0; i < file_num; i++)
+		/*for (size_t i = 0; i < file_num; i++)
 		{
 			if (is_locked_file(&files[i], *conn) == 0)
 				close_file(&files[i], *conn, );
-		}
+		}*/
 
 		//close the connection
 		close(*conn);
@@ -133,7 +135,7 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 	else if(in_msg.type & MESSAGE_OPEN_FILE)
 	{
 		size_t name_size; char* name;
-		read_file_name(&in_msg, &name, &name_size);
+		ERRCHECK(read_file_name(&in_msg, &name, &name_size));
 
 		out_msg.type = MESSAGE_OFILE_ACK;
 
@@ -259,14 +261,14 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 	else if(in_msg.type & MESSAGE_CLOSE_FILE)
 	{
 		size_t name_size; char* name;
-		read_file_name(&in_msg, &name, &name_size);
+		ERRCHECK(read_file_name(&in_msg, &name, &name_size));
 
 		out_msg.type = MESSAGE_CFILE_ACK;
 
 		int fex = file_exists(files, file_num, name);
 		if (fex >= 0)
 		{
-			int lck = close_file(&files[fex], *conn);
+			int lck = 0; //close_file(&files[fex], *conn);
 			if (lck == 0)
 			{
 				out_msg.type |= MESSAGE_OP_SUCC;
@@ -341,7 +343,7 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 	else if(in_msg.type & MESSAGE_LOCK_FILE)
 	{
 		size_t name_size; char* name;
-		read_file_name(&in_msg, &name, &name_size);
+		ERRCHECK(read_file_name(&in_msg, &name, &name_size));
 
 		out_msg.type = MESSAGE_LFILE_ACK;
 
@@ -545,12 +547,13 @@ static int get_no_file(file_t const* files, size_t file_num)
 	ERRSET(EMFILE, -1);
 }
 
-static void read_file_name(net_msg* msg, char** file_name, size_t* file_size)
+static int read_file_name(net_msg* msg, char** file_name, size_t* file_size)
 {
 	read_buf(&msg->data, sizeof(size_t), file_size);
 	if (*file_size > FILENAME_MAX) *file_size = FILENAME_MAX;
 	MALLOC(*file_name, *file_size);
 	read_buf(&msg->data, *file_size * sizeof(char), *file_name);
+	return 0;
 }
 
 static int evict_FIFO(file_t* files, size_t file_num, size_t* last_evicted,

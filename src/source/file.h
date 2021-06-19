@@ -41,31 +41,31 @@ int reset_file_struct(file_t* file);
 
 /* initializes the file struct with an empty file.
  * returns 0 on success, -1 on error and sets errno. */
-int create_file_struct(file_t* file, char* filename, int owner);
+int create_file_struct(file_t* file, char const* filename, int owner);
 
 /* checks if the structure contains an existing file.
  * returns 0 on valid file, 1 on invalid, -1 on error and sets errno. */
-int valid_file_struct(file_t const* file);
+int valid_file_struct(file_t* file);
 
 /* checks if the structure file matches the given file name.
  * returns 0 on name match, 1 on mismatch, -1 on error and sets errno. */
-int check_file_name(file_t const* file, char const* name);
+int check_file_name(file_t* file, char const* name);
 
 /* checks if the file in the structure is open for operations.
  * returns 0 on file open, 1 on file closed, -1 on error and sets errno. */
-int is_open_file(file_t const* file);
+int is_open_file(file_t* file);
 
 /* checks if the file in the structure is locked by a user.
  * returns 0 on file locked, 1 on file unlocked, -1 on error and sets errno. */
-int is_locked_file(file_t const* file, int who);
+int is_locked_file(file_t* file, int who);
 
 /* gets the total size of the given file.
  * returns 0 on success, -1 on error and sets errno. */
-int get_size(file_t const* file, size_t* data_size);
+int get_size(file_t* file, size_t* data_size);
 
 /* gets the usage data from the given file. at least one between fifo, lfu, lru
  * shall be not null. returns 0 on success, -1 on error and sets errno. */
-int get_usage_data(file_t const* file, time_t* fifo, int* lfu, char* lru);
+int get_usage_data(file_t* file, time_t* fifo, int* lfu, char* lru);
 
 /* updates the lru flag with the given value.
  * returns 0 on success, -1 on error and sets errno. */
