@@ -35,7 +35,7 @@ int add_request(req_t newreq, req_t** reqs, size_t* curr_reqs, size_t* reqs_size
 	{
 		//reallocate the array here
 		req_t* new_reqs = NULL;
-		REALLOCDO(new_reqs, (*reqs), (*reqs_size + 10), 
+		REALLOCDO(new_reqs, (*reqs), sizeof(req_t) * (*reqs_size + 10), 
 			{
 				for(size_t i = 0; i < *reqs_size; i++)
 					destroy_request(&(*reqs)[i]);

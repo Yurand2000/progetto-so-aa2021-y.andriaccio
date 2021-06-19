@@ -1,7 +1,7 @@
 #include "string_utils.h"
 
 #include <errno.h>
-#include "errset.h"
+#include "../errset.h"
 
 #ifndef NDEBUG
 	#define PTRSTRCHECK(str) PTRCHECKERRSET((str), EINVAL, -1)

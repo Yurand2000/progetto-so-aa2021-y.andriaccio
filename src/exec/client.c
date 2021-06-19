@@ -1,5 +1,10 @@
 #include "client.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <dirent.h>
 #include <time.h>
 
 #include "../source/client_api.h"
@@ -28,6 +33,7 @@ int main(int argc, char* argv[])
 	if (parse == 1) return 0;
 	else if (parse == -1) { perror(""); return 1; }
 
+	if (socket_name == NULL) { printf("-f flag is mandatory. start with -h for details.\n"); return 0; }
 	if (curr_reqs == 0) { print_help(); return 0; }
 
 	//print all requests for testing

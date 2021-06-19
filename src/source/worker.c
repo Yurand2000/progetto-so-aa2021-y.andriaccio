@@ -18,8 +18,8 @@
 
 #define ERRCK(cond) if(cond == -1) return (void*)1;
 
-static int file_exists(file_t const* files, size_t file_num, const char* filename);
-static int get_no_file(file_t const* files, size_t file_num);
+static int file_exists(file_t* files, size_t file_num, const char* filename);
+static int get_no_file(file_t* files, size_t file_num);
 static int read_file_name(net_msg* msg, char** file_name, size_t* file_size);
 static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	log_t* log, char* lastop_writefile_pname);
@@ -519,7 +519,7 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num, lo
 }
 
 //returns the index of the matching file.
-static int file_exists(file_t const* files, size_t file_num, const char* filename)
+static int file_exists(file_t* files, size_t file_num, const char* filename)
 {
 	for (size_t i = 0; i < file_num; i++)
 	{
@@ -536,7 +536,7 @@ static int file_exists(file_t const* files, size_t file_num, const char* filenam
 }
 
 //returns the index of the first non existing file.
-static int get_no_file(file_t const* files, size_t file_num)
+static int get_no_file(file_t* files, size_t file_num)
 {
 	for (size_t i = 0; i < file_num; i++)
 	{

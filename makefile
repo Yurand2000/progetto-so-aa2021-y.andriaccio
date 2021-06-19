@@ -49,7 +49,7 @@ server	:
 server_debug	:
 
 client	: $(BLDEXE)/client.o $(OBJ_FILE)
-	$(CC) $(CFLAGS) $^ -o $(BEXEC)/$@.out
+	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out
 client_debug : CFLAGS += $(CDEBFLAGS)
 client_debug : client
 
@@ -111,6 +111,7 @@ source := $(1)
 target := $(2)
 add_args := $(3)
 $$(target) : $$(source) $$(add_args)
+	@mkdir -p $$(dir $$@)
 	$(CC) $$(CFLAGS) -c $$< -o $$@
 endef
 
@@ -119,6 +120,7 @@ source := $(1)
 target := $(2)
 objs := $(3)
 $$(target) : $$(source) $$(objs)
+	@mkdir -p $$(dir $$@)
 	$(CC) $$(CFLAGS) $$^ -o $$@
 endef
 
