@@ -385,7 +385,7 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	if (abspath[abspath_size - 1] != '/')
 	{
 		abspath_size++;
-		REALLOC(abspath, abspath, abspath_size);
+		REALLOC(abspath, abspath, abspath_size + 1);
 		abspath[abspath_size - 1] = '/';
 		abspath[abspath_size] = '\0';
 	}
