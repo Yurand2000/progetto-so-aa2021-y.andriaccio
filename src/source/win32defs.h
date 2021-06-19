@@ -11,7 +11,8 @@ int nanosleep(const struct timespec *req, struct timespec *rem);
 int unlink(const char *pathname);
 DIR* opendir(const char *);
 int closedir(DIR *);
-int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
+struct dirent *readdir(DIR *dirp);
+int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result); //deprecated
 
 //pthread defines
 typedef int pthread_mutex_t;
@@ -56,7 +57,7 @@ struct signalfd_siginfo {
 	uint32_t ssi_uid;      /* Real UID of sender */
 	int32_t  ssi_fd;       /* File descriptor (SIGIO) */
 	uint32_t ssi_tid;      /* Kernel timer ID (POSIX timers)
-						   uint32_t ssi_band;     /* Band event (SIGIO) */
+						   uint32_t ssi_band; Band event (SIGIO) */
 	uint32_t ssi_overrun;  /* POSIX timer overrun count */
 	uint32_t ssi_trapno;   /* Trap number that caused signal */
 	int32_t  ssi_status;   /* Exit status or signal (SIGCHLD) */

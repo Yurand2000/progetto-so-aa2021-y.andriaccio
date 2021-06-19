@@ -302,24 +302,24 @@ int expand_dir_to_files(char* dirname, int max, req_t** reqs, size_t* curr_reqs,
 	int count = 0;
 	if (count_ptr == NULL) count_ptr = &count;
 
-	struct dirent entry, *res;
+	struct dirent* entry;
 	DIR* dir_ptr; req_t temp;
 	temp.type = REQUEST_WRITE;
 	init_request(&temp);
 	PTRCHECK((dir_ptr = opendir(dirname)));
 	do
 	{
-		ERRCHECK(readdir_r(dir_ptr, &entry, res));
-		if (entry.d_type == DT_REG) {
-			temp.stringdata_len = strlen(entry.d_name);
+		entry = readdir(dir_ptr);
+		if (entry->d_type == DT_REG) {
+			temp.stringdata_len = strlen(entry->d_name);
 			MALLOC(temp.stringdata, temp.stringdata_len);
-			strncpy(temp.stringdata, entry.d_name, temp.stringdata_len);
+			strncpy(temp.stringdata, entry->d_name, temp.stringdata_len);
 			add_request(temp, reqs, curr_reqs, reqs_size);
 			(*count_ptr)++;
 		}
-		else if (entry.d_type == DT_DIR)
-			expand_dir_to_files(entry.d_name, max, reqs, curr_reqs, reqs_size, count_ptr);
-	} while (res != NULL && (max == 0 || *count_ptr < max));
+		else if (entry->d_type == DT_DIR)
+			expand_dir_to_files(entry->d_name, max, reqs, curr_reqs, reqs_size, count_ptr);
+	} while (entry != NULL && (max == 0 || *count_ptr < max));
 	ERRCHECK(closedir(dir_ptr));
 	return 0;
 }

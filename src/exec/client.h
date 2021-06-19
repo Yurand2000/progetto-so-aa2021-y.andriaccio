@@ -42,7 +42,7 @@
 }
 
 #define WRITE_DIR_TO_LAST_REQUEST {\
-	req_t* last = &reqs[curr_reqs - 1];\
+	req_t* last = &(*reqs)[*curr_reqs - 1];\
 	last->dir_len = strlen(optarg);\
 	MALLOC(last->dir, last->dir_len);\
 	strncpy(last->dir, optarg, last->dir_len);\
