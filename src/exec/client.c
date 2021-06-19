@@ -16,17 +16,19 @@ static int expand_dir_to_files(char* dirname, int max, req_t** reqs,
 	size_t* curr_reqs, size_t* reqs_size, int* count_ptr);
 
 int main(int argc, char* argv[])
-{	
+{
 	char* socket_name = NULL;
 
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
 
 	//parse command line arguments. -------------------------------------------
-    int parse = parse_args(argc, argv, &socket_name, &do_print,
+	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
-	if(parse == 1) return 0;
-	else if(parse == -1) { perror(""); return 1; }
+	if (parse == 1) return 0;
+	else if (parse == -1) { perror(""); return 1; }
+
+	if (curr_reqs == 0) { print_help(); return 0; }
 
 	//print all requests for testing
 	for(size_t i = 0; i < curr_reqs; i++)
@@ -67,7 +69,7 @@ int main(int argc, char* argv[])
 	//add open/create and close requests. -------------------------------------
 	curr_reqs = 0;	//using the old reqs array, but as if it was empty.
 					//all old memory has already been cleared.
-
+#ifdef OPEN_CREATE_REQS
 	free(reqs_exp);
 
 	//print all requests for testing
@@ -79,9 +81,9 @@ int main(int argc, char* argv[])
 		printf("\n");
 	}
 	printf("\n\n-----------------------------------------------------------\n");
-
+#endif
 	//call the client api -----------------------------------------------------
-#ifndef CLIENT_API_ENABLE
+#ifdef CLIENT_API_ENABLE
 #define REQ_FAIL(res) if (res == -1) { perror("Request failure: "); }
 
 	int res; FILE* fd;
