@@ -24,16 +24,16 @@
 	{\
 		char* saveptr = NULL;\
 		char* token = strtok_r(optarg, ",", &saveptr);\
-		request.stringdata_len = strlen(token);\
+		request.stringdata_len = strlen(token) + 1;\
 		MALLOC(request.stringdata, request.stringdata_len);\
 		strncpy(request.stringdata, token, request.stringdata_len);\
 		\
 		token = strtok_r(NULL, ",", &saveptr);\
-		request.n = strtol(token, NULL, 0);\
+		if(token != NULL) request.n = strtol(token, NULL, 0);\
 	}\
 	else\
 	{\
-		request.stringdata_len = strlen(optarg);\
+		request.stringdata_len = strlen(optarg) + 1;\
 		MALLOC(request.stringdata, request.stringdata_len);\
 		strncpy(request.stringdata, optarg, request.stringdata_len);\
 	}\
@@ -43,7 +43,7 @@
 
 #define WRITE_DIR_TO_LAST_REQUEST {\
 	req_t* last = &(*reqs)[*curr_reqs - 1];\
-	last->dir_len = strlen(optarg);\
+	last->dir_len = strlen(optarg) + 1;\
 	MALLOC(last->dir, last->dir_len);\
 	strncpy(last->dir, optarg, last->dir_len);\
 }
@@ -56,7 +56,7 @@
 	{\
 		init_request(&request);\
 		request.type = _type_;\
-		size_t len = strlen(token); len++;\
+		size_t len = strlen(token) + 1; len++;\
 		MALLOC((request.filename), (sizeof(char) * len));\
 		strncpy(request.filename, token, len);\
 		\

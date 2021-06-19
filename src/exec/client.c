@@ -34,14 +34,15 @@ int main(int argc, char* argv[])
 	else if (parse == -1) { perror(""); return 1; }
 
 	if (socket_name == NULL) { printf("-f flag is mandatory. start with -h for details.\n"); return 0; }
+	else printf("socket file: %s\n", socket_name);
 	if (curr_reqs == 0) { print_help(); return 0; }
 
 	//print all requests for testing
 	for(size_t i = 0; i < curr_reqs; i++)
 	{
-		printf("Request %lu, type %d, n %d,", i, reqs[i].type, reqs[i].n);
-		if (reqs[i].stringdata != NULL) printf("files %s,", reqs[i].stringdata);
-		if (reqs[i].dir != NULL) printf("dir %s", reqs[i].dir);
+		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
+		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
+		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
 	}
 
@@ -65,9 +66,9 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
-		printf("Request %lu, type %d, n %d,", i, reqs[i].type, reqs[i].n);
-		if (reqs[i].stringdata != NULL) printf("files %s,", reqs[i].stringdata);
-		if (reqs[i].dir != NULL) printf("dir %s", reqs[i].dir);
+		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
+		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
+		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
 	}
 
@@ -81,9 +82,9 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
-		printf("Request %lu, type %d, n %d,", i, reqs[i].type, reqs[i].n);
-		if (reqs[i].stringdata != NULL) printf("files %s,", reqs[i].stringdata);
-		if (reqs[i].dir != NULL) printf("dir %s", reqs[i].dir);
+		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
+		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
+		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
 	}
 	printf("\n\n-----------------------------------------------------------\n");
@@ -214,7 +215,7 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			CMD_TO_REQUEST(REQUEST_WRITE);
 			break;
 		case 'D':
-			if (prec != 'w' || prec != 'W')
+			if (prec != 'w' && prec != 'W')
 			{
 				printf("-D flag requires a preceding -w or -W flag. "
 					"Start with -h for details.\n");
@@ -231,7 +232,7 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			CMD_TO_REQUEST(REQUEST_READN);
 			break;
 		case 'd':
-			if (prec != 'r' || prec != 'R')
+			if (prec != 'r' && prec != 'R')
 			{
 				printf("-d flag requires a preceding -r or -R flag. "
 					"Start with -h for details.\n");
