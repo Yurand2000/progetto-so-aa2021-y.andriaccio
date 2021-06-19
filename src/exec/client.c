@@ -488,21 +488,21 @@ static int add_open_create_requests(req_t* req, req_t** reqs,
 		temp.type = REQUEST_OPEN_LOCK;
 		break;
 	default:
-		add_request(*req, &reqs, &curr_reqs, &reqs_size);
+		add_request(*req, reqs, curr_reqs, reqs_size);
 		return 0;
 	}
 
 	temp.stringdata_len = req->stringdata_len;
 	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-	add_request(temp, &reqs, &curr_reqs, &reqs_size);
+	add_request(temp, reqs, curr_reqs, reqs_size);
 
-	add_request(*req, &reqs, &curr_reqs, &reqs_size);
+	add_request(*req, reqs, curr_reqs, reqs_size);
 
 	temp.type = REQUEST_CLOSE;
 	temp.stringdata_len = req->stringdata_len;
 	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-	add_request(temp, &reqs, &curr_reqs, &reqs_size);
+	add_request(temp, reqs, curr_reqs, reqs_size);
 	return 0;
 }
