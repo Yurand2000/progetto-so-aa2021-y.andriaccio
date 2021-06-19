@@ -5,6 +5,11 @@
 
 #ifdef WIN32
 
+#define R_OK 0
+#define W_OK 0
+#define X_OK 0
+#define F_OK 0
+
 typedef int ssize_t;
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
@@ -13,6 +18,8 @@ DIR* opendir(const char *);
 int closedir(DIR *);
 struct dirent *readdir(DIR *dirp);
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result); //deprecated
+int access(const char *path, int amode);
+char* get_current_dir_name(void);
 
 //pthread defines
 typedef int pthread_mutex_t;

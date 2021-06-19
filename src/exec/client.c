@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <time.h>
 
+#define _DEBUG
+
 #include "../source/client_api.h"
 
 static void print_help();
@@ -17,12 +19,16 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs);
 
 //expands the given directory to its files in requests.
-static int expand_dir_to_files(char* dirname, int max, req_t** reqs,
-	size_t* curr_reqs, size_t* reqs_size, int* count_ptr);
+static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
+	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
+	int* count_ptr, const char* currdir, size_t currdir_size);
+static int split_and_fix_request_files(req_t* req, req_t** reqs,
+	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size);
 
 int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
+	char* currdir; size_t currdir_size;
 
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
@@ -31,20 +37,38 @@ int main(int argc, char* argv[])
 	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
 	if (parse == 1) return 0;
-	else if (parse == -1) { perror(""); return 1; }
+	else if (parse == -1) { perror("Error during parsing of command line commands: "); return -1; }
 
-	if (socket_name == NULL) { printf("-f flag is mandatory. start with -h for details.\n"); return 0; }
-	else printf("socket file: %s\n", socket_name);
+	if (socket_name == NULL)
+	{
+		printf("-f flag is mandatory. start with -h for details.\n");
+		return -1;
+	}
+	else
+	{
+#ifndef _DEBUG
+		ERRCHECKDO(access(socket_name, R_OK | W_OK),
+			printf("socket file does not exist. Has the server started?\n"));
+#else
+		printf("socket file: %s\n", socket_name);
+#endif
+	}
+
 	if (curr_reqs == 0) { print_help(); return 0; }
 
+	currdir = get_current_dir_name(); //allocated with malloc
+	currdir_size = strlen(currdir);
+
+#ifdef _DEBUG
 	//print all requests for testing
-	for(size_t i = 0; i < curr_reqs; i++)
+	for (size_t i = 0; i < curr_reqs; i++)
 	{
 		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
 		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
 		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
 	}
+#endif
 
 	printf("\n\n-----------------------------------------------------------\n");
 	//expand all requests that have a directory instead of a file. ------------
@@ -54,23 +78,33 @@ int main(int argc, char* argv[])
 		if (reqs[i].type == REQUEST_WRITE_DIR)
 		{
 			expand_dir_to_files(reqs[i].stringdata, reqs[i].n,
-				&reqs_exp, &curr_reqs_exp, &reqs_size_exp, NULL);
+				reqs[i].dir, reqs[i].dir_len,
+				&reqs_exp, &curr_reqs_exp, &reqs_size_exp,
+				NULL, currdir, currdir_size);
 			destroy_request(&reqs[i]);
 		}
-		else
+		else if (reqs[i].type == REQUEST_READN)
 		{
 			add_request(reqs[i], &reqs_exp, &curr_reqs_exp, &reqs_size_exp);
 		}
+		else
+		{
+			split_and_fix_request_files(&reqs[i], reqs_exp, curr_reqs_exp,
+				reqs_size_exp, currdir, currdir_size);
+			destroy_request(&reqs[i]);
+		}
 	}
-	
+
+#ifdef _DEBUG
 	//print all requests for testing
-	for (size_t i = 0; i < curr_reqs; i++)
+	for (size_t i = 0; i < curr_reqs_exp; i++)
 	{
-		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
-		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
-		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
+		printf("Request: %lu; type: %d; n: %d;", i, reqs_exp[i].type, reqs[i].n);
+		if (reqs_exp[i].stringdata != NULL) printf(" files: %s;", reqs_exp[i].stringdata);
+		if (reqs_exp[i].dir != NULL) printf(" dir: %s;", reqs_exp[i].dir);
 		printf("\n");
 	}
+#endif
 
 	printf("\n\n-----------------------------------------------------------\n");
 	//add open/create and close requests. -------------------------------------
@@ -168,6 +202,8 @@ int main(int argc, char* argv[])
 #endif
 
 	//clean and close
+	free(currdir);
+
 	for (size_t i = 0; i < curr_reqs; i++)
 		destroy_request(&reqs[i]);
 	free(reqs);
@@ -303,36 +339,127 @@ static void print_help()
 #undef HELP_TEXT
 }
 
-int expand_dir_to_files(char* dirname, int max, req_t** reqs, size_t* curr_reqs,
-	size_t* reqs_size, int* count_ptr)
+static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
+	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
+	int* count_ptr, const char* currdir, size_t currdir_size)
 {
+	if (dirname == NULL) ERRSET(EINVAL, -1);
+
+	//first call initializes the counter to compare against max ---------------
 	int count = 0;
 	if (count_ptr == NULL) count_ptr = &count;
 
+	//generate the absolute path string ---------------------------------------
+	char* abspath; size_t len, abspath_size;
+	
+	abspath_size = len = strlen(dirname);
+	if (dirname[0] == '/')
+	{
+		MALLOC(abspath, sizeof(char) * abspath_size);
+		strncpy(abspath, dirname, abspath_size);
+	}
+	else
+	{
+		abspath_size += currdir_size;
+		if (currdir[currdir_size - 1] != '/') abspath_size++;
+
+		MALLOC(abspath, sizeof(char) * abspath_size);
+		strncpy(abspath, currdir, currdir_size);
+		if (currdir[currdir_size - 1] != '/')
+		{
+			abspath[currdir_size] = '/';
+			strncpy(abspath + currdir_size + 1, dirname, len);
+		}
+		else
+			strncpy(abspath + currdir_size, dirname, len);
+	}
+
+	//add trailing slash if necessary
+	if (abspath[abspath_size - 1] != '/')
+	{
+		abspath_size++;
+		REALLOC(abspath, abspath, abspath_size);
+		abspath[abspath_size - 1] = '/';
+		abspath[abspath_size] = '\0';
+	}
+
+	//open the directory and look for files -----------------------------------
 	struct dirent* entry;
 	DIR* dir_ptr; req_t temp;
-	temp.type = REQUEST_WRITE;
+
 	init_request(&temp);
+	temp.type = REQUEST_WRITE;
+	temp.dir_len = retdir_size;
+
 	PTRCHECK((dir_ptr = opendir(dirname)));
 
 	entry = readdir(dir_ptr);
 	while (entry != NULL && (max == 0 || *count_ptr < max))
 	{
-		if (entry->d_type == DT_REG) {
-			temp.stringdata_len = strlen(entry->d_name) + 1;
-			MALLOC(temp.stringdata, temp.stringdata_len);
-			strncpy(temp.stringdata, entry->d_name, temp.stringdata_len);
+		if (entry->d_type == DT_REG)
+		{
+			temp.stringdata_len = len = strlen(entry->d_name) + 1;
+			temp.stringdata_len += abspath_size;
+			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+			strncpy(temp.stringdata, abspath, abspath_size);
+			strncpy(temp.stringdata + abspath_size, entry->d_name, len);
+
+			if (temp.dir_len != 0)
+			{
+				MALLOC(temp.dir, sizeof(char) * temp.dir_len);
+				strncpy(temp.dir, retdir, temp.dir_len);
+			}
+
 			add_request(temp, reqs, curr_reqs, reqs_size);
 			(*count_ptr)++;
 		}
 		else if (entry->d_type == DT_DIR && strncmp(entry->d_name, ".", 2) != 0
 			&& strncmp(entry->d_name, "..", 3) != 0)
 		{
-			expand_dir_to_files(entry->d_name, max, reqs, curr_reqs, reqs_size, count_ptr);
+			expand_dir_to_files(entry->d_name, max, retdir, retdir_size,
+				reqs, curr_reqs, reqs_size,
+				count_ptr, currdir, currdir_size);
 		}
 		entry = readdir(dir_ptr);
 	}
+	free(abspath);
 
 	ERRCHECK(closedir(dir_ptr));
+	return 0;
+}
+
+static int split_and_fix_request_files(req_t* req, req_t** reqs,
+	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size)
+{
+	char* saveptr; char* token;
+	req_t new_req; size_t len;
+	init_request(&new_req);
+	new_req.type = req->type;
+	new_req.dir_len = req->dir_len;
+
+	token = strtok_r(req->stringdata, ",", &saveptr);
+	while (token != NULL)
+	{
+		new_req.stringdata_len = len = strlen(token) + 1;
+		if (token[0] != '/') new_req.stringdata_len += currdir_size;
+		MALLOC(new_req.stringdata, sizeof(char) * new_req.stringdata_len);
+		if (token[0] != '/')
+		{
+			strncpy(new_req.stringdata, currdir, currdir_size);
+			strncpy(new_req.stringdata + currdir_size, currdir, len);
+		}
+		else
+			strncpy(new_req.stringdata, token, new_req.stringdata_len);
+
+		if (new_req.dir_len != 0)
+		{
+			MALLOC(new_req.dir, sizeof(char) * new_req.dir_len);
+			strncpy(new_req.dir, req->dir, new_req.dir_len);
+		}
+
+		add_request(new_req, reqs, curr_reqs, reqs_size);
+		token = strtok_r(NULL, ",", &saveptr);
+	}
+
 	return 0;
 }
