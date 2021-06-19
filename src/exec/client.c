@@ -76,7 +76,7 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
-		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
+		printf("Request: %3lu; type: %4d; n: %5d;", i, reqs[i].type, reqs[i].n);
 		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
 		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
@@ -112,7 +112,7 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs_exp; i++)
 	{
-		printf("Request: %lu; type: %d; n: %d;", i, reqs_exp[i].type, reqs_exp[i].n);
+		printf("Request: %3lu; type: %4d; n: %5d;", i, reqs_exp[i].type, reqs_exp[i].n);
 		if (reqs_exp[i].stringdata != NULL) printf(" files: %s;", reqs_exp[i].stringdata);
 		if (reqs_exp[i].dir != NULL) printf(" dir: %s;", reqs_exp[i].dir);
 		printf("\n");
@@ -132,7 +132,7 @@ int main(int argc, char* argv[])
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
-		printf("Request: %lu; type: %d; n: %d;", i, reqs[i].type, reqs[i].n);
+		printf("Request: %3lu; type: %4d; n: %5d;", i, reqs[i].type, reqs[i].n);
 		if (reqs[i].stringdata != NULL) printf(" files: %s;", reqs[i].stringdata);
 		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
@@ -476,33 +476,40 @@ static int add_open_create_requests(req_t* req, req_t** reqs,
 {
 	req_t temp;
 	init_request(&temp);
-	switch (req->type)
+
+	if (req->type == REQUEST_READ || req->type == REQUEST_WRITE || req->type == REQUEST_REMOVE)
 	{
-	case REQUEST_READ:
-		temp.type = REQUEST_OPEN;
-		break;
-	case REQUEST_WRITE:
-		temp.type = REQUEST_CREATE_LOCK;
-		break;
-	case REQUEST_REMOVE:
-		temp.type = REQUEST_OPEN_LOCK;
-		break;
-	default:
-		add_request(*req, reqs, curr_reqs, reqs_size);
-		return 0;
+		switch (req->type)
+		{
+		case REQUEST_READ:
+			temp.type = REQUEST_OPEN;
+			break;
+		case REQUEST_WRITE:
+			temp.type = REQUEST_CREATE_LOCK;
+			break;
+		case REQUEST_REMOVE:
+			temp.type = REQUEST_OPEN_LOCK;
+			break;
+		}
+
+		temp.stringdata_len = req->stringdata_len;
+		MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+		strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+		ERRCHECK(add_request(temp, reqs, curr_reqs, reqs_size));
 	}
 
-	temp.stringdata_len = req->stringdata_len;
-	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-	add_request(temp, reqs, curr_reqs, reqs_size);
+	ERRCHECK(add_request(*req, reqs, curr_reqs, reqs_size));
 
-	add_request(*req, reqs, curr_reqs, reqs_size);
+	if (req->type == REQUEST_READ || req->type == REQUEST_WRITE)
+	{
+		temp.type = REQUEST_CLOSE;
+		temp.stringdata_len = req->stringdata_len;
+		MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+		strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-	temp.type = REQUEST_CLOSE;
-	temp.stringdata_len = req->stringdata_len;
-	MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-	strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-	add_request(temp, reqs, curr_reqs, reqs_size);
+		ERRCHECK(add_request(temp, reqs, curr_reqs, reqs_size));
+	}
+
 	return 0;
 }
