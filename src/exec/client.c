@@ -318,14 +318,17 @@ int expand_dir_to_files(char* dirname, int max, req_t** reqs, size_t* curr_reqs,
 	{
 		entry = readdir(dir_ptr);
 		if (entry->d_type == DT_REG) {
-			temp.stringdata_len = strlen(entry->d_name);
+			temp.stringdata_len = strlen(entry->d_name) + 1;
 			MALLOC(temp.stringdata, temp.stringdata_len);
 			strncpy(temp.stringdata, entry->d_name, temp.stringdata_len);
 			add_request(temp, reqs, curr_reqs, reqs_size);
 			(*count_ptr)++;
 		}
-		else if (entry->d_type == DT_DIR)
+		else if (entry->d_type == DT_DIR && strncmp(entry->d_name, ".", 1) != 0
+			&& strncmp(entry->d_name, "..", 2) != 0)
+		{
 			expand_dir_to_files(entry->d_name, max, reqs, curr_reqs, reqs_size, count_ptr);
+		}
 	} while (entry != NULL && (max == 0 || *count_ptr < max));
 	ERRCHECK(closedir(dir_ptr));
 	return 0;
