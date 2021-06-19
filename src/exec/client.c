@@ -28,7 +28,9 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
-	char* currdir; size_t currdir_size;
+	char currdir[FILENAME_MAX]; size_t currdir_size;
+	ERRCHECK(getcwd(&currdir, FILENAME_MAX));
+	currdir_size = strlen(currdir);
 
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
@@ -55,9 +57,6 @@ int main(int argc, char* argv[])
 	}
 
 	if (curr_reqs == 0) { print_help(); return 0; }
-
-	currdir = get_current_dir_name(); //allocated with malloc
-	currdir_size = strlen(currdir);
 
 #ifdef _DEBUG
 	//print all requests for testing
@@ -202,8 +201,6 @@ int main(int argc, char* argv[])
 #endif
 
 	//clean and close
-	free(currdir);
-
 	for (size_t i = 0; i < curr_reqs; i++)
 		destroy_request(&reqs[i]);
 	free(reqs);
