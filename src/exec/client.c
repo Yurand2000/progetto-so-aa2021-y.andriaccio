@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
 	char currdir[FILENAME_MAX]; size_t currdir_size;
-	ERRCHECK(getcwd(&currdir, FILENAME_MAX));
+	PERRCHECK(getcwd(currdir, FILENAME_MAX) == NULL, "CWD Unexpected error: ");
 	currdir_size = strlen(currdir);
 
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
@@ -88,8 +88,8 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			split_and_fix_request_files(&reqs[i], reqs_exp, curr_reqs_exp,
-				reqs_size_exp, currdir, currdir_size);
+			split_and_fix_request_files(&reqs[i], &reqs_exp, &curr_reqs_exp,
+				&reqs_size_exp, currdir, currdir_size);
 			destroy_request(&reqs[i]);
 		}
 	}

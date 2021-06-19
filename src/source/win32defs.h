@@ -19,7 +19,7 @@ int closedir(DIR *);
 struct dirent *readdir(DIR *dirp);
 int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result); //deprecated
 int access(const char *path, int amode);
-char* get_current_dir_name(void);
+char *getcwd(char *buf, size_t size);
 
 //pthread defines
 typedef int pthread_mutex_t;
