@@ -388,7 +388,7 @@ static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retd
 	temp.type = REQUEST_WRITE;
 	temp.dir_len = retdir_size;
 
-	PTRCHECK((dir_ptr = opendir(dirname)));
+	PTRCHECK((dir_ptr = opendir(abspath)));
 
 	entry = readdir(dir_ptr);
 	while (entry != NULL && (max == 0 || *count_ptr < max))
@@ -443,7 +443,7 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 		if (token[0] != '/')
 		{
 			strncpy(new_req.stringdata, currdir, currdir_size);
-			strncpy(new_req.stringdata + currdir_size, currdir, len);
+			strncpy(new_req.stringdata + currdir_size, token, len);
 		}
 		else
 			strncpy(new_req.stringdata, token, new_req.stringdata_len);
