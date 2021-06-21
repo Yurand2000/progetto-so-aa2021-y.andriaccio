@@ -29,7 +29,7 @@ void test_00()
 
 	msg.type = 0x0001;
 	int data = 0x72727272;
-	write_buf(&msg.data, sizeof(int), &data);
+	push_buf(&msg.data, sizeof(int), &data);
 
 	set_checksum(&msg);
 	printf("Generated checksum: %lu\n", msg.checksum);

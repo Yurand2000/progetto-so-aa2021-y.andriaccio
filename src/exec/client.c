@@ -175,12 +175,12 @@ int main(int argc, char* argv[])
 			break;
 		case REQUEST_READ:
 			res = readFile(reqs[i].stringdata, &buf, &size);
-			if (res == -1) { perror("Request failure: "); }
+			REQ_FAIL(res);
 			else if (reqs[i].dir != NULL)
 			{
 				//create file and write buf data
 				PTRCHECK( (fd = fopen(reqs[i].stringdata, "wb")) );
-				fwrite(buf, 1, size, fd);
+				fwrite(buf, sizeof(char), size, fd);
 				fclose(fd);
 			}
 			free(buf);

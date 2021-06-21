@@ -523,7 +523,7 @@ static int file_exists(file_t* files, size_t file_num, const char* filename)
 {
 	for (size_t i = 0; i < file_num; i++)
 	{
-		int val = valid_file_struct(&files[i]);
+		int val = is_existing_file(&files[i]);
 		if (val == 0)
 		{
 			int chk = check_file_name(&files[i], filename);
@@ -540,7 +540,7 @@ static int get_no_file(file_t* files, size_t file_num)
 {
 	for (size_t i = 0; i < file_num; i++)
 	{
-		int val = valid_file_struct(&files[i]);
+		int val = is_existing_file(&files[i]);
 		if (val == 1) return i;
 		else if (val != 0) return -1;
 	}
@@ -549,10 +549,10 @@ static int get_no_file(file_t* files, size_t file_num)
 
 static int read_file_name(net_msg* msg, char** file_name, size_t* file_size)
 {
-	read_buf(&msg->data, sizeof(size_t), file_size);
+	pop_buf(&msg->data, sizeof(size_t), file_size);
 	if (*file_size > FILENAME_MAX) *file_size = FILENAME_MAX;
 	MALLOC(*file_name, *file_size);
-	read_buf(&msg->data, *file_size * sizeof(char), *file_name);
+	pop_buf(&msg->data, *file_size * sizeof(char), *file_name);
 	return 0;
 }
 

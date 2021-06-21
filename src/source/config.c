@@ -6,6 +6,8 @@
 
 #include "errset.h"
 
+
+//static reallocating function
 static int realloc_cfg_struct(cfg_file_t* cfg, size_t newsize)
 {
 	cfg_kv* temp;

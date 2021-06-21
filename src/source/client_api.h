@@ -10,15 +10,13 @@
  * No other functions are used by softwares to connect to the server.
  * they return 0 on success, -1 on error setting errno. */
 
-/* Open AF_UNIX connection to the given socket, with a retry time of msec, and a
- * timeout of abstime. */
-int openConnection(const char* sockname, int msec, const struct timespec abstime);
+/* Open AF_UNIX connection to the given socket.  */
+int openConnection(const char* sockname, int retry_time_msec, const struct timespec timeout);
 
-/* Closes the connetion if open, the parameter sockname is ignored. */
 int closeConnection(const char* sockname);
 
-/* Request to open or create a file, given the file pathname and optional flags.
- * FLAGS: O_CREATE, O_LOCK. */
+/* Request to open or create a file.
+ * FLAGS: O_CREATE create file, O_LOCK lock file. */
 int openFile(const char* pathname, int flags);
 
 /* Request to read the whole content of the given file, storing it into the
@@ -31,24 +29,17 @@ int readFile(const char* pathname, void** buf, size_t* size);
 int readNFiles(int n, const char* dirname);
 
 /* Request to write a file into the server files. If the file expels some data,
- * it is returned to the caller. Valid only if the prevoius call was openFile
- * with O_CREATE as flag, same pathname, and returned with success. */
+ * it is returned to the caller. Valid only if the previous call was openFile
+ * with O_CREATE and O_LOCK as flags, same pathname, and returned with success. */
 int writeFile(const char* pathname, const char* dirname);
 
 /* Request to append data to a given file. If the file expels some data, it is
  * returned to the caller. */
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
 
-/* Request to lock a file for exclusive use. */
 int lockFile(const char* pathname);
-
-/* Request to unlock a file that had exclusive use. */
 int unlockFile(const char* pathname);
-
-/* Request to close an open file for the user. */
 int closeFile(const char* pathname);
-
-/* Request to delete a file from the server. */
 int removeFile(const char* pathname);
 
 #endif

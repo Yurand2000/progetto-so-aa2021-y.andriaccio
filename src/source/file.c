@@ -62,7 +62,7 @@ int create_file_struct(file_t* file, char const* filename, int owner)
 	return 0;
 }
 
-int valid_file_struct(file_t* file)
+int is_existing_file(file_t* file)
 {
 	if(file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);

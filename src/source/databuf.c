@@ -9,8 +9,7 @@
 
 #define REALLOC_MULTIPLIER 2
 
-//reallocating buffer for additional size, hidden function
-//sets errno on error, returns -1.
+//reallocating buffer for additional size, static function
 static int realloc_buf(databuf* buf, size_t newsize)
 {
 	buf->buffer = realloc(buf->buffer, newsize);
@@ -33,19 +32,17 @@ int create_data_buffer(databuf* out)
 	return 0;
 }
 
-int read_buf(databuf* buf, size_t datalen, void* read_data)
+int pop_buf(databuf* buf, size_t datalen, void* read_data)
 {
 	if(buf == NULL || read_data == NULL) ERRSET(EINVAL, -1);
 	if(datalen > buf->buf_size) ERRSET(ENOBUFS, -1);
 
 	buf->buf_size -= datalen;
 	memcpy(read_data, (char*)buf->buffer + buf->buf_size, datalen);
-	//reallocation check? (if capacity > 2 * size then capacity /= 2)
-	//not implemented.
 	return 0;
 }
 
-int write_buf(databuf* buf, size_t datalen, const void* write_data)
+int push_buf(databuf* buf, size_t datalen, const void* write_data)
 {
 	if(buf == NULL || write_data == NULL) ERRSET(EINVAL, -1);
 
@@ -79,17 +76,5 @@ int resize_data_buffer(databuf* buf, size_t newsize)
 
 	if(buf->buf_size > newsize)
 		buf->buf_size = newsize;
-	return 0;
-}
-
-int replace_data_buffer(databuf* buf, void* buffer, size_t buf_size, size_t buf_cap)
-{
-	if(buf == NULL || (buffer == NULL && buf_cap != 0) || buf_size > buf_cap)
-		ERRSET(EINVAL, -1);
-
-	free(buf->buffer);
-	buf->buffer = buffer;
-	buf->buf_size = buf_size;
-	buf->buf_cap = buf_cap;
 	return 0;
 }

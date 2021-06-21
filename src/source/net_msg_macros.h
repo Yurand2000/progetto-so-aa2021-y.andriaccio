@@ -11,24 +11,24 @@
 
 /* sends the message given by m_ptr to the socket. deletes the message afterwards.
  * calls return -1 in case of error and sets errno. */
-#define SEND_TO_SOCKET(sock, m_ptr) {\
-	ERRCHECKDO(write_msg(sock, m_ptr), destroy_message(m_ptr));\
+#define SEND_TO_SOCKET(sock, m_ptr, func) {\
+	ERRCHECKDO(write_msg(sock, m_ptr), { destroy_message(m_ptr); func; });\
 	destroy_message(m_ptr);\
 }
 
 /* reads to the message given by m_ptr from the socket. initializes the structure by itself.
  * calls return -1 in case of error, deletes the message and sets errno. */
-#define READ_FROM_SOCKET(sock, m_ptr) {\
+#define READ_FROM_SOCKET(sock, m_ptr, func) {\
 	create_message(m_ptr);\
-	ERRCHECKDO(read_msg(sock, m_ptr), destroy_message(m_ptr));\
+	ERRCHECKDO(read_msg(sock, m_ptr), { destroy_message(m_ptr); func; });\
 }
 
 /* sends the message given by m_out_ptr to the socket and reads (blocking)
  * a response message from the server. There are error checks which make the function
  * return -1 setting errno. It should clean the memory properly. */
-#define SEND_RECEIVE_TO_SOCKET(sock, m_out_ptr, m_in_ptr) {\
-	SEND_TO_SOCKET(sock, m_out_ptr);\
-	READ_FROM_SOCKET(sock, m_in_ptr);\
+#define SEND_RECEIVE_TO_SOCKET(sock, m_out_ptr, m_in_ptr, func) {\
+	SEND_TO_SOCKET(sock, m_out_ptr, func);\
+	READ_FROM_SOCKET(sock, m_in_ptr,func);\
 }
 
 #define CHECK_MSG_SRV(m_ptr, tp) (check_checksum(m_ptr) &&\
