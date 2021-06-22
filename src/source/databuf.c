@@ -42,6 +42,15 @@ int pop_buf(databuf* buf, size_t datalen, void* read_data)
 	return 0;
 }
 
+int pop_buf_discard(databuf* buf, size_t datalen)
+{
+	if (buf == NULL) ERRSET(EINVAL, -1);
+	if (datalen > buf->buf_size) ERRSET(ENOBUFS, -1);
+
+	buf->buf_size -= datalen;
+	return 0;
+}
+
 int push_buf(databuf* buf, size_t datalen, const void* write_data)
 {
 	if(buf == NULL || write_data == NULL) ERRSET(EINVAL, -1);

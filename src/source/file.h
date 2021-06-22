@@ -40,6 +40,9 @@ int create_file_struct(file_t* file, char const* filename, int owner);
 int is_existing_file(file_t* file);
 
 /* returns 0 on name match, 1 on mismatch, -1 on error and sets errno. */
+int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* read_size);
+
+/* returns 0 on name match, 1 on mismatch, -1 on error and sets errno. */
 int check_file_name(file_t* file, char const* name);
 
 /* returns 0 on file open, 1 on file closed, -1 on error and sets errno. */
@@ -57,10 +60,10 @@ int get_usage_data(file_t* file, time_t* fifo, int* lfu, char* lru);
 int update_lru(file_t* file, char newval);
 
 int open_file(file_t* file, int who);
-int close_file(file_t* file, int who, long max_size, long* curr_size, pthread_mutex_t* state_mux);
+int close_file(file_t* file, int who, long* difference);
 
 /* read the whole file into the given buffer, reallocating if necessary. */
-int read_file(file_t* file, int who, void** out_data, size_t* out_data_size);
+int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, size_t* read_size);
 
 int write_file(file_t* file, int who, const void* data, size_t data_size);
 int append_file(file_t* file, int who, const void* data, size_t data_size);
@@ -69,6 +72,8 @@ int lock_file(file_t* file, int who);
 int unlock_file(file_t* file, int who);
 int remove_file(file_t* file, int who);
 
+/* forcefully read the whole file into the given buffer, reallocating if necessary. */
+int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t* read_size);
 /* forcefully removes a file, regardless of its state. */
 int force_remove_file(file_t* file);
 

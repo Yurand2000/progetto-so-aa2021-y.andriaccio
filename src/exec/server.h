@@ -12,10 +12,6 @@
 #define MAX_STORAGE_FILES 1024 * 1024
 #define MAX_CONNECTIONS 50
 
-#define ALGO_FIFO 0
-#define ALGO_LRU 1
-#define ALGO_LFU 2
-
 typedef struct config_data
 {
 	char socket_file[FILENAME_MAX_SIZE];

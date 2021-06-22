@@ -182,6 +182,7 @@ int readNFiles(int n, const char* dirname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_READN_FILE);
+	push_buf(&msg.data, sizeof(int), &n);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
@@ -191,10 +192,6 @@ int readNFiles(int n, const char* dirname)
 		msg_t flags = GETFLAGS(msg.type);
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
 		{ ERRCHECKDO(save_cached_files(&msg, dirname), { destroy_message(&msg); }); }
-		else if (HASFLAG(flags, MESSAGE_FILE_NPERM))
-		{ ERRSETDO(EPERM, destroy_message(&msg), -1); }
-		else if (HASFLAG(flags, MESSAGE_FILE_NEXISTS))
-		{ ERRSETDO(ENOENT, destroy_message(&msg), -1); }
 		else
 		{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 

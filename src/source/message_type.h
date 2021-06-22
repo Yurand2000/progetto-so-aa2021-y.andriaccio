@@ -89,8 +89,6 @@ typedef uint32_t msg_t;
 #define STRING_LOCK_FILE "lock file"
 #define STRING_UNLOCK_FILE "unlock file"
 #define STRING_REMOVE_FILE "remove file"
-#define STRING_OPEN_OCREATE "create file"
-#define STRING_OPEN_OLOCK "lock file"
 
 //there are no checks on these macro functions.
 #define GET_STRING_FROM_OPERATION(msg, out) {\

@@ -73,6 +73,24 @@ int is_existing_file(file_t* file)
 	else return 1;
 }
 
+int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* read_size)
+{
+	if (file == NULL || out_data == NULL || out_data_size == NULL || read_size == NULL) ERRSET(EINVAL, -1);
+	LOCK(file);
+	size_t name_len = strlen(file->name) + 1;
+	if (*out_data_size <= name_len)
+	{
+		void* out;
+		REALLOCDO(out, *out_data, name_len, { UNLOCK(file); });
+		*out_data = out;
+		*out_data_size = name_len;
+	}
+	*read_size = name_len;
+	memcpy(*out_data, file->name, name_len);
+	UNLOCK(file);
+	return 0;
+}
+
 int check_file_name(file_t* file, char const* name)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
@@ -165,7 +183,7 @@ int open_file(file_t* file, int who)
 	}
 }
 
-int close_file(file_t* file, int who, long max_size, long* curr_size, pthread_mutex_t* state_mux)
+int close_file(file_t* file, int who, long* difference)
 {
 	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
 
@@ -185,10 +203,7 @@ int close_file(file_t* file, int who, long max_size, long* curr_size, pthread_mu
 			REALLOC(file->data, file->data, file->data_size);
 			memcpy(file->data, file->open_data, file->data_size);
 
-			ERRCHECKDO(pthread_mutex_lock(state_mux), UNLOCK(file));
-			*curr_size -= file->new_size;
-			*curr_size += (file->data_size - old_size);
-			ERRCHECKDO(pthread_mutex_unlock(state_mux), UNLOCK(file));
+			*difference = (old_size - file->data_size);
 		}
 
 		free(file->open_data);
@@ -203,10 +218,11 @@ int close_file(file_t* file, int who, long max_size, long* curr_size, pthread_mu
 	}
 }
 
-int read_file(file_t* file, int who, void** out_data, size_t* out_data_size)
+int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, size_t* read_size)
 {
 	if(file == NULL || who <= OWNER_NULL ||
-		out_data == NULL || out_data_size == NULL) ERRSET(EINVAL, -1);
+		out_data == NULL || out_data_size == NULL
+		|| read_size == NULL) ERRSET(EINVAL, -1);
 
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
@@ -215,11 +231,35 @@ int read_file(file_t* file, int who, void** out_data, size_t* out_data_size)
 	if(*out_data_size <= file->open_size)
 	{
 		void* out;
-		REALLOCDO(out, *out_data, file->open_size, { UNLOCK(file); free(*out_data); });
+		REALLOCDO(out, *out_data, file->open_size, { UNLOCK(file); });
 		*out_data = out;
 		*out_data_size = file->open_size;
 	}
 
+	*read_size = file->open_size;
+	memcpy(*out_data, file->open_data, file->open_size);
+	file->lfu_frequency += 1;
+	file->lru_clock = 1;
+	UNLOCK(file);
+	return 0;
+}
+
+int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t* read_size)
+{
+	if (file == NULL || out_data == NULL || out_data_size == NULL
+		|| read_size == NULL) ERRSET(EINVAL, -1);
+
+	LOCK(file);
+	CHECK_OPEN_FILE(file);
+	if (*out_data_size <= file->open_size)
+	{
+		void* out;
+		REALLOCDO(out, *out_data, file->open_size, { UNLOCK(file); });
+		*out_data = out;
+		*out_data_size = file->open_size;
+	}
+
+	*read_size = file->open_size;
 	memcpy(*out_data, file->open_data, file->open_size);
 	file->lfu_frequency += 1;
 	file->lru_clock = 1;

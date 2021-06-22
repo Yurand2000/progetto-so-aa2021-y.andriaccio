@@ -2,13 +2,13 @@
 #define LOG_FILE
 #include "win32defs.h"
 
-#define FILENAME_MAX_SIZE 256
+#define FILE_NAME_MAX_SIZE 256
 
 #include <pthread.h>
 
 typedef struct log_file
 {
-	char filename[FILENAME_MAX_SIZE];
+	char filename[FILE_NAME_MAX_SIZE];
 	pthread_mutex_t mux;
 } log_t;
 

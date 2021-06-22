@@ -17,6 +17,7 @@ int create_data_buffer(databuf* out);
 int destroy_data_buffer(databuf* buf);
 
 int pop_buf(databuf* buf, size_t datalen, void* read_data);
+int pop_buf_discard(databuf* buf, size_t datalen);
 int push_buf(databuf* buf, size_t datalen, const void* write_data);
 
 int resize_data_buffer(databuf* buf, size_t newsize);
