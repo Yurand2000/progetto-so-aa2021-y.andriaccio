@@ -16,7 +16,7 @@ int init_log_file_struct(log_t* log, char* logname)
 	PTRCHECKERRSET(logname, EINVAL, -1);
 
 	size_t len = strlen(logname);
-	if (len >= FILENAME_MAX_SIZE) ERRSET(EINVAL, -1);
+	if (len >= FILE_NAME_MAX_SIZE) ERRSET(EINVAL, -1);
 
 	ERRCHECK(pthread_mutex_init(&log->mux, NULL));
 	strncpy(log->filename, logname, len + 1);

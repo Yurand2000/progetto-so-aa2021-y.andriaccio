@@ -1,5 +1,5 @@
 CC	=	gcc
-CFLAGS	=	-Wall
+CFLAGS	=	-Wall -lpthread
 CRELFLAGS =	-O3
 CDEBFLAGS =	-g -fprofile-arcs -ftest-coverage -I ./src/source
 
@@ -45,8 +45,10 @@ all	: $(TARGET)
 
 debug	: $(TARGET_DEBUG)
 
-server	:
-server_debug	:
+server	: $(BLDEXE)/server.o $(OBJ_FILE)
+	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out
+server_debug : CFLAGS += $(CDEBFLAGS)
+server_debug : server
 
 client	: $(BLDEXE)/client.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out

@@ -7,6 +7,11 @@
 
 #include "file.h"
 
+typedef struct client_state {
+	int fd;
+	char lastop[FILE_NAME_MAX_SIZE];
+} client_state;
+
 typedef struct shared_state
 {
 	//readonly data
@@ -29,10 +34,6 @@ typedef struct shared_state
 	size_t last_evicted;
 } shared_state;
 
-typedef struct client_state {
-	int fd;
-	char lastop[FILE_NAME_MAX_SIZE];
-} client_state;
 
 int init_shared_state(shared_state* ss, char cache_miss, long max_storage,
 	int max_files, int max_conns, int acceptor);

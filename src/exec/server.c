@@ -2,6 +2,7 @@
 #include "../source/win32defs.h"
 
 #include <unistd.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -24,9 +25,12 @@ int main(int argc, char* argv[])
 {
 	cfg_t config_data;
 	log_t log_file;
+	int ret;
 
 	//parse command line and load config file, start logging ------------------
-	command_line_parsing(argc, argv, &config_data);
+	ERRCHECK((ret = command_line_parsing(argc, argv, &config_data)));
+	if (ret == 1) return 0;
+
 	init_log_file_struct(&log_file, config_data.log_file);
 	reset_log(&log_file);
 	printf("* * * SERVER STARTED * * *\n");
@@ -48,7 +52,7 @@ int main(int argc, char* argv[])
 	//prepare connection storage for poll + signal handlers -------------------
 
 	//signal handler to file descriptor
-	sigset_t sig_mask, old_mask; struct signalfd_siginfo sig_read;
+	sigset_t sig_mask, old_mask;
 	ERRCHECK(sigemptyset(&sig_mask));
 	ERRCHECK(sigaddset(&sig_mask, SIGINT));
 	ERRCHECK(sigaddset(&sig_mask, SIGQUIT));
@@ -124,9 +128,7 @@ int main(int argc, char* argv[])
 
 			//join threads
 			for (size_t i = 0; i < threads_count; i++)
-			{
-				ERRCHECK(pthread_join(&threads[i], NULL));
-			}
+			{ ERRCHECK(pthread_join(threads[i], NULL)); }
 
 			exit = 1;
 		}
@@ -165,7 +167,7 @@ int main(int argc, char* argv[])
 
 				//join threads
 				for (size_t i = 0; i < threads_count; i++)
-				{ ERRCHECK(pthread_join(&threads[i], NULL)); }
+				{ ERRCHECK(pthread_join(threads[i], NULL)); }
 
 				//close all connections
 				for (size_t i = 0; i < config_data.max_connections; i++)
@@ -291,7 +293,7 @@ int main(int argc, char* argv[])
 
 	//print stats
 	printf("* * * SERVER TERMINATED * * *\n");
-	printf("* STATISTICS: *\n  Max Storage: %d Mb;\n  Max Files: %d;"
+	printf("* STATISTICS: *\n  Max Storage: %ld Mb;\n  Max Files: %d;"
 		"\n  Chace Miss Calls: %d;\n  Files still in storage: %d\n",
 		state.max_reached_storage, state.max_reached_files,
 		state.cache_miss_execs, 100);
@@ -318,7 +320,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void command_line_parsing(int argc, char* argv[], cfg_t* config_data)
+int command_line_parsing(int argc, char* argv[], cfg_t* config_data)
 {
 	char* cfg = DEFAULT_CONFIG_FILE_NAME;
 
@@ -332,15 +334,16 @@ void command_line_parsing(int argc, char* argv[], cfg_t* config_data)
 			break;
 		case 'h':
 			printf("server application; arguments: [-c config_file] [-h]\n");
-			return 0;
+			return 1;
 		case '?':
 		case ':':
-			return 1;
+			return -1;
 		}
 	}
 
 	init_default_config(config_data);
 	parse_config_from_file(config_data, cfg);
+	return 0;
 }
 
 void init_default_config(cfg_t* cfg)
@@ -358,18 +361,18 @@ void init_default_config(cfg_t* cfg)
 void parse_config_from_file(cfg_t* cfg, char const* filename)
 {
 	cfg_file_t read_cfg;
-	ERRCHECKDO(read_config_file(filename, &read_cfg),
-		free_config_file(&read_cfg));
+	if(read_config_file(filename, &read_cfg) == -1)
+		free_config_file(&read_cfg);
 
 	//current valid options in config file:
 	//socket_name, log_name, worker_threads, storage_size, max_files, max_connections, algorithm
-	char* opt_str; size_t temp; long temp2;
+	char const* opt_str; size_t temp; long temp2;
 	opt_str = get_option(&read_cfg, "socket_name");
-	if (opt_str != NULL && (temp = strlen(opt_str)) < FILENAME_MAX_SIZE)
+	if (opt_str != NULL && (temp = strlen(opt_str)) < FILE_NAME_MAX_SIZE)
 		strncpy(cfg->socket_file, opt_str, temp + 1);
 
 	opt_str = get_option(&read_cfg, "log_name");
-	if (opt_str != NULL && (temp = strlen(opt_str)) < FILENAME_MAX_SIZE)
+	if (opt_str != NULL && (temp = strlen(opt_str)) < FILE_NAME_MAX_SIZE)
 		strncpy(cfg->log_file, opt_str, temp + 1);
 
 	opt_str = get_option(&read_cfg, "worker_threads");

@@ -437,7 +437,7 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 			REALLOCDO(name, name, (sizeof(char) * len), { free(name); free(buf); });
 			name_len = len;
 		}
-		ERRCHECKDO(pop_buf(&msg->data, (sizeof(char) * len), *name), { free(name); free(buf); });
+		ERRCHECKDO(pop_buf(&msg->data, (sizeof(char) * len), name), { free(name); free(buf); });
 
 		//get data
 		ERRCHECKDO(pop_buf(&msg->data, sizeof(size_t), &len), { free(name); free(buf); });
@@ -446,7 +446,7 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 			REALLOCDO(buf, buf, (sizeof(char) * len), { free(name); free(buf); });
 			buf_len = len;
 		}
-		ERRCHECKDO(pop_buf(&msg->data, (sizeof(char) * len), *buf), { free(name); free(buf); });
+		ERRCHECKDO(pop_buf(&msg->data, (sizeof(char) * len), buf), { free(name); free(buf); });
 
 		//write to file
 		ERRCHECKDO(write_buf_to_file(name, buf, len, dirname), { free(name); free(buf); });

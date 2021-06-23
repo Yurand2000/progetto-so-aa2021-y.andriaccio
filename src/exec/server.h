@@ -5,17 +5,17 @@
 #define DEFAULT_SOCKET_FILE_NAME "./socket.sk"
 #define DEFAULT_SOCKET_FILE_SIZE sizeof(DEFAULT_SOCKET_FILE_NAME)
 #define DEFAULT_LOG_FILE_NAME "./log.txt"
-#define DEFAULT_LOG_FILE_SIZE sizeof(DEFAULT_SOCKET_FILE_NAME)
-#define FILENAME_MAX_SIZE 256
+#define DEFAULT_LOG_FILE_SIZE sizeof(DEFAULT_LOG_FILE_NAME)
+#define FILE_NAME_MAX_SIZE 256
 #define MAX_WORKER_THREADS 64
-#define MAX_STORAGE_CAPACITY 4 * 1024 * 1024 * 1024	//4GB
+#define MAX_STORAGE_CAPACITY (long)(4 * 1024 * 1024 * 1024)	//4GB
 #define MAX_STORAGE_FILES 1024 * 1024
 #define MAX_CONNECTIONS 50
 
 typedef struct config_data
 {
-	char socket_file[FILENAME_MAX_SIZE];
-	char log_file[FILENAME_MAX_SIZE];
+	char socket_file[FILE_NAME_MAX_SIZE];
+	char log_file[FILE_NAME_MAX_SIZE];
 	int worker_threads;
 	long storage_capacity; //in bytes
 	int max_files;
@@ -23,7 +23,7 @@ typedef struct config_data
 	char algorithm;
 } cfg_t;
 
-void command_line_parsing(int argc, char* argv[], cfg_t* config_data);
+int command_line_parsing(int argc, char* argv[], cfg_t* config_data);
 
 void init_default_config(cfg_t* cfg);
 
