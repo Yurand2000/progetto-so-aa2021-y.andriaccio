@@ -73,13 +73,16 @@ int main(int argc, char* argv[])
 	poll_array[poll_size - 1].fd = sigfd; //signal listener
 	poll_array[poll_size - 1].events = POLLIN;
 
-	//prepare the file structure and generic state mux
+	//prepare the file structure
 	file_t* files; size_t file_num = config_data.max_files;
-	long current_storage = 0;
-	int current_files = 0;
-	pthread_mutex_t state_mux;
 	MALLOC(files, sizeof(file_t) * file_num);
-	ERRCHECK(pthread_mutex_init(&state_mux, NULL));
+	for (size_t i = 0; i < file_num; i++)
+		init_file_struct(&files[i]);
+
+	//prepare the generic state
+	shared_state state;
+	init_shared_state(&state, config_data.algorithm, config_data.storage_capacity,
+		config_data.max_files, config_data.max_connections, sck);
 
 	//prepare threads
 	pthread_t* threads; worker_data* threads_data;
@@ -88,29 +91,8 @@ int main(int argc, char* argv[])
 	MALLOC(threads_data, sizeof(worker_data) * threads_count);
 	for (size_t i = 0; i < threads_count; i++)
 	{
-		//fill each worker_data for each thread - - - - - - - - - - - - - - - -
-		worker_data* th_data = &threads_data[i];
-
-		ERRCHECK(pthread_mutex_init(&th_data->thread_mux, NULL));
-		ERRCHECK(pthread_cond_init(th_data->thread_cond, NULL));
-		th_data->do_work = 0;
-		th_data->exit = 0;
-		th_data->work_conn = 0;
-		th_data->new_conn = 0;
-		th_data->work_conn_lastop = NULL;
-
-		th_data->files = files;
-		th_data->file_num = file_num;
-		th_data->log = &log_file;
-
-		th_data->max_storage = config_data.storage_capacity;
-		th_data->max_files = config_data.max_files;
-		th_data->cache_miss_algorithm = config_data.algorithm;
-		th_data->current_storage = &current_storage;
-		th_data->current_files = &current_files;
-		th_data->state_mux = &state_mux;
-
-		//spawn thread - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+		init_worker_data(&threads_data[i], files, file_num, &log_file, &state);
+		//spawn thread
 		ERRCHECK(pthread_create(&threads[i], NULL, worker_routine, &threads_data[i]));
 	}
 
@@ -118,6 +100,11 @@ int main(int argc, char* argv[])
 	int exit = 0; int hup = 0;
 	while (!exit)
 	{
+		int current_connections;
+		ERRCHECK(pthread_mutex_lock(&state.state_mux));
+		current_connections = state.current_conns;
+		ERRCHECK(pthread_mutex_unlock(&state.state_mux));
+
 		//if SIGHUP was raised and there are no more active clients
 		if (hup && current_connections == 0)
 		{
@@ -144,6 +131,7 @@ int main(int argc, char* argv[])
 			exit = 1;
 		}
 
+		//poll call
 		if (working_threads < (int)threads_count)
 		{
 			ERRCHECK(poll(poll_array, poll_size, -1)); //blocking
@@ -154,13 +142,18 @@ int main(int argc, char* argv[])
 			ERRCHECK(poll(&poll_array[poll_size - 1], 1, -1));
 		}
 
-		if (poll_array[poll_size - 1].revents & POLLIN) //check signals
+		//check signals
+		if (poll_array[poll_size - 1].revents & POLLIN)
 		{
 			struct signalfd_siginfo in_signal;
 			ERRCHECK(readn(poll_array[poll_size - 1].fd, &in_signal, sizeof(struct signalfd_siginfo)));
 			if (in_signal.ssi_signo == SIGINT || in_signal.ssi_signo == SIGQUIT)
 			{
 				//join all threads, close all connections, exit ---------------
+				//close acceptor connection and signal handler
+				ERRCHECK(close(poll_array[poll_size - 1].fd));
+				ERRCHECK(close(poll_array[poll_size - 2].fd));
+
 				//set all threads to stop
 				for (size_t i = 0; i < threads_count; i++)
 				{
@@ -169,10 +162,6 @@ int main(int argc, char* argv[])
 					th_data->exit = 1;
 					ERRCHECK(pthread_mutex_unlock(&th_data->thread_mux));
 				}
-
-				//close acceptor connection and signal handler
-				ERRCHECK(close(poll_array[poll_size - 1].fd));
-				ERRCHECK(close(poll_array[poll_size - 2].fd));
 
 				//join threads
 				for (size_t i = 0; i < threads_count; i++)
@@ -189,7 +178,7 @@ int main(int argc, char* argv[])
 			}
 			else if (in_signal.ssi_signo == SIGHUP)
 			{
-				//stop incoming connections, terminete when all clients close -
+				//stop incoming connections, terminate when all clients close
 				ERRCHECK(close(poll_array[poll_size - 2].fd)); hup = 1;
 			}
 			else if (in_signal.ssi_signo == SIGUSR1)
@@ -203,8 +192,8 @@ int main(int argc, char* argv[])
 					if (th_data->do_work == WORKER_DONE)
 					{
 						th_data->do_work = WORKER_IDLE;
-						work_conn = th_data->work_conn;
-						new_conn = th_data->new_conn;
+						work_conn = th_data->in_conn;
+						new_conn = th_data->add_conn;
 						working_threads--;
 					}
 					ERRCHECK(pthread_mutex_unlock(&th_data->thread_mux));
@@ -213,11 +202,8 @@ int main(int argc, char* argv[])
 					if (work_conn == sck)
 					{
 						poll_array[poll_size - 2].fd = work_conn;
-						if (new_conn > 0) work_conn = new_conn;
 					}
-
-					//add the connection to the poll list
-					if (work_conn > 0)
+					else if (work_conn > 0) //add the connection to the poll list
 					{
 						int done = 0;
 						for (size_t i = 0; i < config_data.max_connections && !done; i++)
@@ -230,6 +216,18 @@ int main(int argc, char* argv[])
 						}
 					}
 
+					if (new_conn > 0)
+					{
+						int done = 0;
+						for (size_t i = 0; i < config_data.max_connections && !done; i++)
+						{
+							if (poll_array[i].fd == -1)
+							{
+								poll_array[i].fd = new_conn;
+								done = 1;
+							}
+						}
+					}
 				}
 			}
 		}
@@ -246,8 +244,7 @@ int main(int argc, char* argv[])
 				if (th_data->do_work == WORKER_IDLE)
 				{
 					th_data->do_work = WORKER_DO;
-					th_data->work_conn = fd;
-					th_data->new_conn = fd;
+					th_data->in_conn = fd;
 					ERRCHECK(pthread_cond_signal(&th_data->thread_cond));
 					working_threads++;
 					done = 1;
@@ -281,8 +278,7 @@ int main(int argc, char* argv[])
 				if (th_data->do_work == WORKER_IDLE)
 				{
 					th_data->do_work = WORKER_DO;
-					th_data->work_conn = fd;
-					th_data->new_conn = -1;
+					th_data->in_conn = fd;
 					ERRCHECK(pthread_cond_signal(&th_data->thread_cond));
 					working_threads++;
 					done = 1;
@@ -297,15 +293,29 @@ int main(int argc, char* argv[])
 	printf("* * * SERVER TERMINATED * * *\n");
 	printf("* STATISTICS: *\n  Max Storage: %d Mb;\n  Max Files: %d;"
 		"\n  Chace Miss Calls: %d;\n  Files still in storage: %d\n",
-		100, 100, 100, 100);
+		state.max_reached_storage, state.max_reached_files,
+		state.cache_miss_execs, 100);
 	for (size_t i = 0; i < file_num; i++)
 	{
 		if (files[i].owner != OWNER_NEXIST)
 			printf("  - %s\n", files[i].name);
 	}
 
-	//destruction
+	//destruction -------------------------------------------------------------
+	//destroy thread data structs
+	for (size_t i = 0; i < threads_count; i++)
+		destroy_worker_data(&threads_data[i]);
+
+	//destroy generic state
+	destroy_shared_state(&state);
+
+	//destroy files
+	for(size_t i = 0; i < file_num; i++)
+		destroy_file_struct(&files[i]);
+	free(files);
+
 	destroy_log_file_struct(&log_file);
+	return 0;
 }
 
 void command_line_parsing(int argc, char* argv[], cfg_t* config_data)
@@ -397,4 +407,6 @@ void parse_config_from_file(cfg_t* cfg, char const* filename)
 		else if (strncmp(opt_str, "lru", 3) == 0) cfg->algorithm = ALGO_LRU;
 		else if (strncmp(opt_str, "lfu", 3) == 0) cfg->algorithm = ALGO_LFU;
 	}
+	
+	free_config_file(&read_cfg);
 }
