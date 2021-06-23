@@ -59,7 +59,7 @@ void* worker_routine(void* args)
 	while(1)
 	{
 		THREAD_ERRCHECK(pthread_mutex_lock(&data->thread_mux));
-		while (data->do_work != WORKER_DO)
+		while (data->do_work != WORKER_DO || data->exit)
 			THREAD_ERRCHECK(pthread_cond_wait(&data->thread_cond, &data->thread_mux));
 
 		if (data->exit)
