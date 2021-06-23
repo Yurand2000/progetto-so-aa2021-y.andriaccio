@@ -21,11 +21,11 @@
 #include "../worker.h"
 #include "../readn_writen.h"
 
-int sighup_handler(worker_data* work_data, pthread_t* threads, size_t thread_size,
+int sighup_handler(worker_data* work_data, pthread_t* threads, size_t threads_size,
 	struct pollfd* poll_array, nfds_t poll_size, int* exit)
 {
 	//set all threads to stop
-	for (size_t i = 0; i < thread_size; i++)
+	for (size_t i = 0; i < threads_size; i++)
 	{
 		worker_data* th_data = &work_data[i];
 		ERRCHECK(pthread_mutex_lock(&th_data->thread_mux));
@@ -38,7 +38,7 @@ int sighup_handler(worker_data* work_data, pthread_t* threads, size_t thread_siz
 	ERRCHECK(close(poll_array[poll_size - 2].fd));
 
 	//join threads
-	for (size_t i = 0; i < threads; i++)
+	for (size_t i = 0; i < threads_size; i++)
 	{
 		ERRCHECK(pthread_join(threads[i], NULL));
 	}
@@ -97,7 +97,7 @@ int after_poll_acceptor(struct pollfd* poll_array, nfds_t poll_size, pthread_t* 
 	int fd = poll_array[poll_size - 2].fd;
 	poll_array[poll_size - 2].fd = -1;
 
-	ERRCHECK(thread_assign_work(threads_data, threads_count, fd, *working_threads));
+	ERRCHECK(thread_assign_work(threads_data, threads_count, fd, working_threads));
 	return 0;
 }
 
@@ -117,7 +117,7 @@ int after_poll_connection(struct pollfd* poll_array, nfds_t poll_size, pthread_t
 	}
 	if(fd == -1) ERRSET(EIO, -1);
 
-	ERRCHECK(thread_assign_work(threads_data, threads_count, fd, *working_threads));
+	ERRCHECK(thread_assign_work(threads_data, threads_count, fd, working_threads));
 	return 0;
 }
 
@@ -172,7 +172,7 @@ int thread_has_finished(struct pollfd* poll_array, nfds_t poll_size,
 		if (work_conn == acceptor)
 			poll_array[poll_size - 2].fd = work_conn;
 		else if (work_conn > 0) //readd the connection to the poll list
-			ERRCHECK(add_connection_to_poll(poll_array, poll_size, new_conn, work_conn));
+			ERRCHECK(add_connection_to_poll(poll_array, poll_size, work_conn, config));
 
 		if (new_conn > 0) //new connection incoming
 			ERRCHECK(add_connection_to_poll(poll_array, poll_size, new_conn, config));
