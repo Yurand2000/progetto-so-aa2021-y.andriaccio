@@ -39,8 +39,9 @@ int destroy_shared_state(shared_state* ss)
 {
 	if (ss == NULL) ERRSET(EINVAL, -1);
 
-	pthread_mutex_destroy(&ss->state_mux);
 	free(ss->clients);
+	ERRCHECK(pthread_mutex_destroy(&ss->state_mux));
+	return 0;
 }
 
 int add_client(shared_state* ss, int conn)

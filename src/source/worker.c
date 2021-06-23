@@ -1,6 +1,7 @@
 #include "worker.h"
 #include "worker/worker_generics.h"
 
+#include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/types.h>
@@ -40,7 +41,7 @@ int init_worker_data(worker_data* wd, file_t* files, size_t file_num,
 
 int destroy_worker_data(worker_data* wd)
 {
-	if (wd == NULL) ERRESET(EINVAL, -1);
+	if (wd == NULL) ERRSET(EINVAL, -1);
 
 	ERRCHECK(pthread_mutex_destroy(&wd->thread_mux));
 	ERRCHECK(pthread_cond_destroy(&wd->thread_cond));
@@ -64,7 +65,7 @@ void* worker_routine(void* args)
 		if (data->exit)
 		{
 			THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));
-			return (void*)worker_did;
+			return (void*)((uintptr_t)worker_did);
 		}
 		else
 		{
