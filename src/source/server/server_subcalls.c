@@ -50,6 +50,8 @@ int stop_all_threads(worker_data* threads_data, size_t threads_count)
 		worker_data* th_data = &threads_data[i];
 		ERRCHECK(pthread_mutex_lock(&th_data->thread_mux));
 		th_data->exit = 1;
+		if (th_data->do_work == WORKER_IDLE)
+			ERRCHECK(pthread_cond_signal(&th_data->thread_cond));
 		ERRCHECK(pthread_mutex_unlock(&th_data->thread_mux));
 	}
 	return 0;
