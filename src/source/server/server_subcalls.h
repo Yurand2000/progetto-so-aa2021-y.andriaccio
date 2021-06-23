@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <poll.h>
 
 #include "../log.h"
 #include "../file.h"
