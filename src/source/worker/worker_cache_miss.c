@@ -1,5 +1,6 @@
 #include "worker_generics.h"
 
+#include <limits.h>
 #include <errno.h>
 
 #include "../file.h"
@@ -8,7 +9,7 @@
 
 int cache_miss(file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
 {
-	void* buf = NULL; void* name = NULL; size_t buf_size = 0, name_size = 0;
+	void* buf = NULL; char* name = NULL; size_t buf_size = 0, name_size = 0;
 	//cache miss call here
 	switch (state->ro_cache_miss_algorithm)
 	{
@@ -38,7 +39,7 @@ int cache_miss(file_t* files, size_t file_num, shared_state* state, net_msg* out
 }
 
 int delete_evicted(int file, file_t* files, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t* name_size)
+	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t storage;
 	ERRCHECK(get_size(&files[file], &storage));
@@ -55,7 +56,7 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 }
 
 int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size)
+	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_older = 0;
 	time_t curr_older_time = time(NULL);
@@ -75,7 +76,7 @@ int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
 }
 
 int evict_LRU(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size)
+	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
 	size_t clock_pos = state->last_evicted;
@@ -97,7 +98,7 @@ int evict_LRU(file_t* files, size_t file_num, shared_state* state,
 }
 
 int evict_LFU(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size)
+	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_least_used = 0;
 	int curr_least_used_freq = INT_MAX;

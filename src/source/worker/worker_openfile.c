@@ -30,8 +30,8 @@ int do_open_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
-	char name[FILE_NAME_MAX_SIZE]; size_t name_size;
-	ERRCHECK(read_file_name(in_msg, name, name_size));
+	char name[FILE_NAME_MAX_SIZE];
+	ERRCHECK(read_file_name(in_msg, name, FILE_NAME_MAX_SIZE));
 
 	out_msg->type = MESSAGE_OFILE_ACK;
 	SET_EMPTY_STRING(lastop_writefile_pname);
@@ -102,6 +102,7 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 
 		do_log(log, *conn, STRING_OPEN_FILE, name, "File already exists.");
 	}
+	return 0;
 }
 
 static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
@@ -142,4 +143,5 @@ static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, ne
 
 		do_log(log, *conn, STRING_OPEN_FILE, name, "File doesn't exist.");
 	}
+	return 0;
 }

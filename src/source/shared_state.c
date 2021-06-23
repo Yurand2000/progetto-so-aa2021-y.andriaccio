@@ -32,6 +32,7 @@ int init_shared_state(shared_state* ss, char cache_miss, long max_storage,
 	ss->max_reached_conns = 0;
 	ss->cache_miss_execs = 0;
 	ss->last_evicted = 0;
+	return 0;
 }
 
 int destroy_shared_state(shared_state* ss)

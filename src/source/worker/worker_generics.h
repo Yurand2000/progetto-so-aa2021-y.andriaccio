@@ -33,13 +33,13 @@ int read_file_name(net_msg* msg, char* buffer_name, size_t buffer_size);
 /* cache miss functions. */
 int cache_miss(file_t* files, size_t file_num, shared_state* state, net_msg* out_msg);
 int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size);
+	void** buf, size_t* buf_size, char** name, size_t* name_size);
 int evict_LRU(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size);
+	void** buf, size_t* buf_size, char** name, size_t* name_size);
 int evict_LFU(file_t* files, size_t file_num, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t name_size);
+	void** buf, size_t* buf_size, char** name, size_t* name_size);
 int delete_evicted(int file, file_t* files, shared_state* state,
-	void** buf, size_t* buf_size, void** name, size_t* name_size);
+	void** buf, size_t* buf_size, char** name, size_t* name_size);
 
 void do_log(log_t* log, int fileno, char* operation, char* file, char* error);
 

@@ -22,8 +22,8 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
-	char name[FILE_NAME_MAX_SIZE]; size_t name_size;
-	ERRCHECK(read_file_name(in_msg, name, name_size));
+	char name[FILE_NAME_MAX_SIZE];
+	ERRCHECK(read_file_name(in_msg, name, FILE_NAME_MAX_SIZE));
 
 	out_msg->type = MESSAGE_WFILE_ACK;
 	if (strncmp(name, lastop_writefile_pname, FILE_NAME_MAX_SIZE) == 0)
@@ -201,4 +201,5 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			do_log(log, *conn, STRING_APPEND_FILE, name, "Success.");
 		}
 	}
+	return 0;
 }

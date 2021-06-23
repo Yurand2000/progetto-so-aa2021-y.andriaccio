@@ -22,8 +22,8 @@ int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
-	char name[FILE_NAME_MAX_SIZE]; size_t name_size;
-	ERRCHECK(read_file_name(in_msg, name, name_size));
+	char name[FILE_NAME_MAX_SIZE];
+	ERRCHECK(read_file_name(in_msg, name, FILE_NAME_MAX_SIZE));
 	SET_EMPTY_STRING(lastop_writefile_pname);
 
 	out_msg->type = MESSAGE_RFILE_ACK;
