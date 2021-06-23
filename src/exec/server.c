@@ -30,77 +30,77 @@ int main(int argc, char* argv[])
 	//parse command line and load config file, start logging ------------------
 	if (parse_cmd_start_log(argc, argv, &config_data, &log_file) == -1)
 	{
-		if (errno != EINVAL) { perror("Startup error: "); return 1; }
+		if (errno != EINVAL) { perror("Startup error"); return 1; }
 		else return 0;
 	}
 	printf("* * * SERVER STARTED * * *\n");
 
 	//prepare socket and start listening --------------------------------------
 	int sck;
-	PERRCHECK(prepare_socket(&sck, &config_data), "Socket initialization error: ");
+	PERRCHECK(prepare_socket(&sck, &config_data), "Socket initialization error");
 
 	//prepare connection storage for poll + signal handlers -------------------
 	int sigfd; sigset_t old_mask;
-	PERRCHECK(signal_to_file(&sigfd, &old_mask), "Signal to file handler error: ");
+	PERRCHECK(signal_to_file(&sigfd, &old_mask), "Signal to file handler error");
 
 	struct pollfd* poll_array; nfds_t poll_size;
 	PERRCHECK(initialize_poll_array(sck, sigfd, &poll_array, &poll_size, &config_data),
-		"Poll array creation error: ");
+		"Poll array creation error");
 
 	file_t* files; size_t file_num;
-	PERRCHECK(initialize_file_structure(&files, &file_num, &config_data), "File initialization error: ");
+	PERRCHECK(initialize_file_structure(&files, &file_num, &config_data), "File initialization error");
 
 	shared_state state;
-	PERRCHECK(prepare_shared_data(&state, sck, &config_data), "Shared State initialization error: ");
+	PERRCHECK(prepare_shared_data(&state, sck, &config_data), "Shared State initialization error");
 
 	//prepare threads
 	pthread_t* threads; worker_data* threads_data; size_t threads_count; int working_threads = 0;
 	PERRCHECK(prepare_threads(&threads, &threads_count, &threads_data,
-		files, file_num, &state, &log_file, &config_data), "Thread initialization error: ");
+		files, file_num, &state, &log_file, &config_data), "Thread initialization error");
 
 	//poll --------------------------------------------------------------------
 	int exit = 0; int sighup = 0; int current_connections;
 	while (!exit)
 	{
 		PERRCHECK(get_current_connections(&state, &current_connections),
-			"Poll loop error: ");
+			"Poll loop error");
 
 		//if SIGHUP was raised and there are no more active clients
 		if (sighup && current_connections == 0)
 		{
 			PERRCHECK(sighup_handler(threads_data, threads, threads_count, poll_array, poll_size, &exit),
-				"SigHUP terminator error: ");
+				"SigHUP terminator error");
 		}
 
 		PERRCHECK(poll_call(poll_array, poll_size, working_threads, threads_count),
-			"Poll call error: ");
+			"Poll call error");
 
 		if (poll_array[poll_size - 1].revents & POLLIN) //check signals
 		{
 			PERRCHECK(after_poll_signal(poll_array, poll_size, threads,
 				threads_data, threads_count,
 				sck, &working_threads, &exit, &sighup, &config_data),
-				"Signal handling error: ");
+				"Signal handling error");
 		}
 		else if (poll_array[poll_size - 2].revents & POLLIN) //check acceptor
 		{
 			PERRCHECK(after_poll_acceptor(poll_array, poll_size, threads,
 				threads_data, threads_count,
 				sck, &working_threads, &exit, &sighup, &config_data),
-				"Signal handling error: ");
+				"Acceptor handling error");
 		}
 		else //check connections
 		{
 			PERRCHECK(after_poll_connection(poll_array, poll_size, threads,
 				threads_data, threads_count,
 				sck, &working_threads, &exit, &sighup, &config_data),
-				"Signal handling error: ");
+				"Connection handling error");
 		}
 	}
 
 	//print stats
 	printf("* * * SERVER TERMINATED * * *\n");
-	PERRCHECK(print_stats(&state, files, file_num), "Statistics printer error: ");
+	PERRCHECK(print_stats(&state, files, file_num), "Statistics printer error");
 
 	//destruction -------------------------------------------------------------
 	//destroy thread data structs

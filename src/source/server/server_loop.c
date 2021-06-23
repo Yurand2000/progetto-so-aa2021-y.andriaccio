@@ -33,9 +33,8 @@ int sighup_handler(worker_data* work_data, pthread_t* threads, size_t threads_si
 		ERRCHECK(pthread_mutex_unlock(&th_data->thread_mux));
 	}
 
-	//close acceptor connection and signal handler
+	//close signal handler
 	ERRCHECK(close(poll_array[poll_size - 1].fd));
-	ERRCHECK(close(poll_array[poll_size - 2].fd));
 
 	//join threads
 	for (size_t i = 0; i < threads_size; i++)
