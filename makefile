@@ -1,5 +1,6 @@
 CC	=	gcc
-CFLAGS	=	-Wall -lpthread
+CFLAGS	= -Wall
+CFLAGS_END = -lpthread
 CRELFLAGS =	-O3
 CDEBFLAGS =	-g -fprofile-arcs -ftest-coverage -I ./src/source
 
@@ -46,12 +47,12 @@ all	: $(TARGET)
 debug	: $(TARGET_DEBUG)
 
 server	: $(BLDEXE)/server.o $(OBJ_FILE)
-	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out
+	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out $(CFLAGS_END)
 server_debug : CFLAGS += $(CDEBFLAGS)
 server_debug : server
 
 client	: $(BLDEXE)/client.o $(OBJ_FILE)
-	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out
+	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out $(CFLAGS_END)
 client_debug : CFLAGS += $(CDEBFLAGS)
 client_debug : client
 
@@ -114,7 +115,7 @@ target := $(2)
 add_args := $(3)
 $$(target) : $$(source) $$(add_args)
 	@mkdir -p $$(dir $$@)
-	$(CC) $$(CFLAGS) -c $$< -o $$@
+	$(CC) $$(CFLAGS) -c $$< -o $$@ $$(CFLAGS_END)
 endef
 
 define comp_out =
@@ -123,7 +124,7 @@ target := $(2)
 objs := $(3)
 $$(target) : $$(source) $$(objs)
 	@mkdir -p $$(dir $$@)
-	$(CC) $$(CFLAGS) $$^ -o $$@
+	$(CC) $$(CFLAGS) $$^ -o $$@ $$(CFLAGS_END)
 endef
 
 define make_obj_rules =

@@ -36,7 +36,7 @@ int get_empty_slot(file_t* files, size_t file_num)
 int read_file_name(net_msg* msg, char* buf_name, size_t buf_size)
 {
 	size_t file_size;
-	pop_buf(&msg->data, sizeof(size_t), file_size);
+	pop_buf(&msg->data, sizeof(size_t), &file_size);
 	if (file_size <= buf_size)
 	{
 		pop_buf(&msg->data, file_size * sizeof(char), buf_name);
