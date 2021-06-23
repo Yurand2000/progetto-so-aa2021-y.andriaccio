@@ -37,10 +37,8 @@ int sighup_handler(worker_data* work_data, pthread_t* threads, size_t threads_si
 	ERRCHECK(close(poll_array[poll_size - 1].fd));
 
 	//join threads
-	for (size_t i = 0; i < threads_size; i++)
-	{
-		ERRCHECK(pthread_join(threads[i], NULL));
-	}
+	ERRCHECK(stop_all_threads(work_data, threads_size));
+	ERRCHECK(join_all_threads(threads, threads_size));
 	*exit = 1;
 	return 0;
 }
