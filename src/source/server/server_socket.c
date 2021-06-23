@@ -30,7 +30,7 @@ int prepare_socket(int* sock, cfg_t* config)
 	//generate connection address
 	struct sockaddr_un addr;
 	addr.sun_family = AF_UNIX;
-	strncpy(addr.sun_path, config->socket_file, len + 1);
+	strncpy(addr.sun_path, config->socket_file, UNIX_PATH_MAX);
 
 	//bind to listen
 	ERRCHECK(bind(*sock, (struct sockaddr*)&addr, sizeof(struct sockaddr_un)));
