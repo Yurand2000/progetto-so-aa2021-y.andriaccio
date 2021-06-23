@@ -105,9 +105,13 @@ int main(int argc, char* argv[])
 	PERRCHECK(print_stats(&state, files, file_num), "Statistics printer error");
 
 	//destruction -------------------------------------------------------------
+	free(poll_array);
+
 	//destroy thread data structs
 	for (size_t i = 0; i < threads_count; i++)
 		destroy_worker_data(&threads_data[i]);
+	free(threads_data);
+	free(threads);
 
 	//destroy generic state
 	destroy_shared_state(&state);
