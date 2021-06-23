@@ -1,7 +1,17 @@
+#ifndef SERVER_SUBCALLS
+#define SERVER_SUBCALLS
+
 #include "../../exec/server.h"
 #include "../win32defs.h"
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <signal.h>
+
 #include "../log.h"
+#include "../file.h"
+#include "../worker.h"
+#include "../shared_state.h"
 
 /* all functions are only to be called by the server main function. */
 /* all functions return 0 on success, -1 on failure setting errno. */
@@ -58,3 +68,5 @@ int stop_all_threads(worker_data* threads_data, size_t threads_count);
 int join_all_threads(pthread_t* threads, size_t threads_count);
 int close_all_client_connections(struct pollfd* poll_array, cfg_t* config);
 int add_connection_to_poll(struct pollfd* poll_array, nfds_t poll_size, int conn, cfg_t* config);
+
+#endif
