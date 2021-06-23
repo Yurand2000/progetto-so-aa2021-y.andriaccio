@@ -23,10 +23,4 @@ typedef struct config_data
 	char algorithm;
 } cfg_t;
 
-int command_line_parsing(int argc, char* argv[], cfg_t* config_data);
-
-void init_default_config(cfg_t* cfg);
-
-void parse_config_from_file(cfg_t* cfg, char const* filename);
-
 #endif
