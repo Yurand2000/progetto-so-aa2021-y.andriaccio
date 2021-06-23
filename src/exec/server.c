@@ -71,30 +71,32 @@ int main(int argc, char* argv[])
 			PERRCHECK(sighup_handler(threads_data, threads, threads_count, poll_array, poll_size, &exit),
 				"SigHUP terminator error");
 		}
+		else
+		{
+			PERRCHECK(poll_call(poll_array, poll_size, working_threads, threads_count),
+				"Poll call error");
 
-		PERRCHECK(poll_call(poll_array, poll_size, working_threads, threads_count),
-			"Poll call error");
-
-		if (poll_array[poll_size - 1].revents & POLLIN) //check signals
-		{
-			PERRCHECK(after_poll_signal(poll_array, poll_size, threads,
-				threads_data, threads_count,
-				sck, &working_threads, &exit, &sighup, &config_data),
-				"Signal handling error");
-		}
-		else if (poll_array[poll_size - 2].revents & POLLIN) //check acceptor
-		{
-			PERRCHECK(after_poll_acceptor(poll_array, poll_size, threads,
-				threads_data, threads_count,
-				sck, &working_threads, &exit, &sighup, &config_data),
-				"Acceptor handling error");
-		}
-		else //check connections
-		{
-			PERRCHECK(after_poll_connection(poll_array, poll_size, threads,
-				threads_data, threads_count,
-				sck, &working_threads, &exit, &sighup, &config_data),
-				"Connection handling error");
+			if (poll_array[poll_size - 1].revents & POLLIN) //check signals
+			{
+				PERRCHECK(after_poll_signal(poll_array, poll_size, threads,
+					threads_data, threads_count,
+					sck, &working_threads, &exit, &sighup, &config_data),
+					"Signal handling error");
+			}
+			else if (poll_array[poll_size - 2].revents & POLLIN) //check acceptor
+			{
+				PERRCHECK(after_poll_acceptor(poll_array, poll_size, threads,
+					threads_data, threads_count,
+					sck, &working_threads, &exit, &sighup, &config_data),
+					"Acceptor handling error");
+			}
+			else //check connections
+			{
+				PERRCHECK(after_poll_connection(poll_array, poll_size, threads,
+					threads_data, threads_count,
+					sck, &working_threads, &exit, &sighup, &config_data),
+					"Connection handling error");
+			}
 		}
 	}
 
