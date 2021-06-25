@@ -36,7 +36,7 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 	//waiting for a message from the new connection, otherwise drop it.
 	//need a timeout!!
 	create_message(&in_msg);
-	ERRCHECKDO(read_msg(*conn, &in_msg), destroy_message(&in_msg));
+	ERRCHECKDO(read_msg(*newconn, &in_msg), destroy_message(&in_msg));
 	create_message(&out_msg);
 
 	msg_t flags = GETFLAGS(in_msg.type);
