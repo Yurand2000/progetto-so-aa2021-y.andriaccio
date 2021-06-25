@@ -31,11 +31,11 @@
 	READ_FROM_SOCKET(sock, m_in_ptr,func);\
 }
 
-#define CHECK_MSG_SRV(m_ptr, tp) (check_checksum(m_ptr) &&\
-	ISSERVER((m_ptr)->type) &&\
-	( GETSERVER((m_ptr)->type) == (tp) ) )
+#define CHECK_MSG_SRV(m_ptr, tp) (!check_checksum(m_ptr) && \
+	ISSERVER((m_ptr)->type) && \
+	(GETSERVER((m_ptr)->type) == (tp)))
 
-#define CHECK_MSG_CNT(m_ptr, tp) (check_checksum(m_ptr) &&\
+#define CHECK_MSG_CNT(m_ptr, tp) (!check_checksum(m_ptr) &&\
 	ISCLIENT((m_ptr)->type) &&\
 	( GETCLIENT((m_ptr)->type) == (tp) ) )
 
