@@ -41,7 +41,7 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 
 	msg_t flags = GETFLAGS(in_msg.type);
 
-	if (is_client_message(&in_msg, MESSAGE_OPEN_CONN) != 0)
+	if (is_client_message(&in_msg, MESSAGE_OPEN_CONN) == 0)
 	{
 		if (add_client(shared, *newconn) == -1)
 		{
