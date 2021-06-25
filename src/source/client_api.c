@@ -74,7 +74,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_OCONN_ACK);
+	int check = is_server_message(&msg, MESSAGE_OCONN_ACK);
 	destroy_message(&msg);
 	if(check)
 		return 0;
@@ -119,7 +119,7 @@ int openFile(const char* pathname, int flags)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_OFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_OFILE_ACK);
 	destroy_message(&msg);
 	if(check)
 	{
@@ -151,7 +151,7 @@ int readFile(const char* pathname, void** buf, size_t* size)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	if(CHECK_MSG_SRV(&msg, MESSAGE_RFILE_ACK))
+	if(is_server_message(&msg, MESSAGE_RFILE_ACK))
 	{ 
 		msg_t flags = GETFLAGS(msg.type);
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
@@ -187,7 +187,7 @@ int readNFiles(int n, const char* dirname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	if (CHECK_MSG_SRV(&msg, MESSAGE_RNFILE_ACK))
+	if (is_server_message(&msg, MESSAGE_RNFILE_ACK))
 	{
 		msg_t flags = GETFLAGS(msg.type);
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
@@ -234,7 +234,7 @@ int writeFile(const char* pathname, const char* dirname)
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
 	int cachemiss = 0;
-	if(CHECK_MSG_SRV(&msg, MESSAGE_WFILE_ACK))
+	if(is_server_message(&msg, MESSAGE_WFILE_ACK))
 	{
 
 		msg_t flags = GETFLAGS(msg.type);
@@ -278,7 +278,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
 	int cachemiss = 0;
-	if(CHECK_MSG_SRV(&msg, MESSAGE_AFILE_ACK))
+	if(is_server_message(&msg, MESSAGE_AFILE_ACK))
 	{
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_FILE_CHACEMISS))
@@ -315,7 +315,7 @@ int lockFile(const char* pathname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_LFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_LFILE_ACK);
 	destroy_message(&msg);
 	if(check)
 	{
@@ -345,7 +345,7 @@ int unlockFile(const char* pathname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_ULFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_ULFILE_ACK);
 	destroy_message(&msg);
 	if(check)
 	{
@@ -375,7 +375,7 @@ int closeFile(const char* pathname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_CFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_CFILE_ACK);
 	destroy_message(&msg);
 	if(check)
 	{
@@ -405,7 +405,7 @@ int removeFile(const char* pathname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = CHECK_MSG_SRV(&msg, MESSAGE_RFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_RFILE_ACK);
 	destroy_message(&msg);
 	if(check)
 	{

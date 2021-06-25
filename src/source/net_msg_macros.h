@@ -9,6 +9,8 @@
 #define UNIX_PATH_MAX 108
 #define FILE_PATH_MAX FILE_NAME_MAX_SIZE
 
+/* all the funtions return 0 on success, -1 on failure setting errno. */
+
 /* sends the message given by m_ptr to the socket. deletes the message afterwards.
  * calls return -1 in case of error and sets errno. */
 #define SEND_TO_SOCKET(sock, m_ptr, func) {\
@@ -31,13 +33,8 @@
 	READ_FROM_SOCKET(sock, m_in_ptr,func);\
 }
 
-#define CHECK_MSG_SRV(m_ptr, tp) (!check_checksum(m_ptr) && \
-	ISSERVER((m_ptr)->type) && \
-	(GETSERVER((m_ptr)->type) == (tp & MESSAGE_SERVER_MASK)))
-
-#define CHECK_MSG_CNT(m_ptr, tp) (!check_checksum(m_ptr) &&\
-	ISCLIENT((m_ptr)->type) &&\
-	( GETCLIENT((m_ptr)->type) == (tp & MESSAGE_CLIENT_MASK) ) )
+int is_server_message(net_msg* message, msg_t message_num);
+int is_client_message(net_msg* message, msg_t message_num);
 
 #define BUILD_EMPTY_MESSAGE(m_ptr, tp) {\
 	create_message(m_ptr);\
