@@ -33,11 +33,11 @@
 
 #define CHECK_MSG_SRV(m_ptr, tp) (!check_checksum(m_ptr) && \
 	ISSERVER((m_ptr)->type) && \
-	(GETSERVER((m_ptr)->type) == (tp)))
+	(GETSERVER((m_ptr)->type) == (tp & MESSAGE_SERVER_MASK)))
 
 #define CHECK_MSG_CNT(m_ptr, tp) (!check_checksum(m_ptr) &&\
 	ISCLIENT((m_ptr)->type) &&\
-	( GETCLIENT((m_ptr)->type) == (tp) ) )
+	( GETCLIENT((m_ptr)->type) == (tp & MESSAGE_CLIENT_MASK) ) )
 
 #define BUILD_EMPTY_MESSAGE(m_ptr, tp) {\
 	create_message(m_ptr);\
