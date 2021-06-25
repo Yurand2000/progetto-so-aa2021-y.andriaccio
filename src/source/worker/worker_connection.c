@@ -41,7 +41,7 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 
 	msg_t flags = GETFLAGS(in_msg.type);
 
-	if (ISCLIENT(in_msg.type) && (in_msg.type & MESSAGE_OPEN_CONN))
+	if (is_client_message(&in_msg, MESSAGE_OPEN_CONN) != 0)
 	{
 		if (add_client(shared, *newconn) == -1)
 		{
@@ -51,6 +51,7 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 		else
 		{
 			out_msg.type = MESSAGE_OCONN_ACK;
+			set_checksum(&out_msg);
 			ERRCHECK(write_msg(*newconn, &out_msg));
 
 			do_log(log, *newconn, STRING_OPEN_CONN, "none", "Client connected.");

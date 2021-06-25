@@ -104,7 +104,8 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	create_message(&in_msg);
 	ERRCHECKDO(read_msg(*conn, &in_msg), { destroy_message(&in_msg); });
 
-	if (!ISCLIENT(in_msg.type)) ERRSETDO(EBADMSG, { destroy_message(&in_msg); }, -1);
+	ret = is_client_message(&in_msg, in_msg.type);
+	if (ret != 0) ERRSETDO(EBADMSG, { destroy_message(&in_msg); }, -1);
 	create_message(&out_msg);
 
 	ERRCHECK(get_client_lastop(shared, *conn, &lastop));
@@ -144,6 +145,7 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 		do_log(log, *conn, "Unknown Operation", "none", "Unknown Operation");
 	}
 
+	set_checksum(&out_msg);
 	ERRCHECK(write_msg(*conn, &out_msg));
 	destroy_message(&out_msg);
 	destroy_message(&in_msg);
