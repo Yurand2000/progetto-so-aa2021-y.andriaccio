@@ -36,6 +36,8 @@
 int is_server_message(net_msg* message, msg_t message_num);
 int is_client_message(net_msg* message, msg_t message_num);
 
+#define CHECK_MSG_TYPE(msg, type) ((msg & type) == type)
+
 #define BUILD_EMPTY_MESSAGE(m_ptr, tp) {\
 	create_message(m_ptr);\
 	(m_ptr)->type = tp;\

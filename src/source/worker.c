@@ -109,34 +109,34 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	create_message(&out_msg);
 
 	ERRCHECK(get_client_lastop(shared, *conn, &lastop));
-	if(in_msg.type & MESSAGE_CLOSE_CONN)
+	if(CHECK_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_CONN))
 		ret = do_close_connection(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_OPEN_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_OPEN_FILE))
 		ret = do_open_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_CLOSE_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_FILE))
 		ret = do_close_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_READ_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_READ_FILE))
 		ret = do_read_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if (in_msg.type & MESSAGE_READN_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_READN_FILE))
 		ret = do_readn_files(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_WRITE_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_WRITE_FILE))
 		ret = do_write_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_APPEND_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_APPEND_FILE))
 		ret = do_append_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_LOCK_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_LOCK_FILE))
 		ret = do_lock_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_UNLOCK_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_UNLOCK_FILE))
 		ret = do_unlock_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
-	else if(in_msg.type & MESSAGE_REMOVE_FILE)
+	else if (CHECK_MSG_TYPE(in_msg.type, MESSAGE_REMOVE_FILE))
 		ret = do_remove_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else
