@@ -7,6 +7,7 @@
 
 #include "errset.h"
 
+#define REALLOC_ADDER 10
 #define REALLOC_MULTIPLIER 2
 
 //reallocating buffer for additional size, static function
@@ -55,11 +56,8 @@ int push_buf(databuf* buf, size_t datalen, const void* write_data)
 {
 	if(buf == NULL || write_data == NULL) ERRSET(EINVAL, -1);
 
-	if(buf->buf_cap - buf->buf_size < datalen)
-	{
-		if(realloc_buf(buf, buf->buf_cap * REALLOC_MULTIPLIER) == -1)
-			return -1;
-	}
+	while(buf->buf_cap - buf->buf_size < datalen)
+		ERRCHECK(realloc_buf(buf, buf->buf_cap * REALLOC_MULTIPLIER + REALLOC_ADDER));
 
 	memcpy((char*)buf->buffer + buf->buf_size, write_data, datalen);
 	buf->buf_size += datalen;
@@ -80,8 +78,7 @@ int resize_data_buffer(databuf* buf, size_t newsize)
 {
 	if(buf == NULL) ERRSET(EINVAL, -1);
 
-	int err = realloc_buf(buf, newsize);
-	if(err == -1) return -1;
+	ERRCHECK(realloc_buf(buf, newsize));
 
 	if(buf->buf_size > newsize)
 		buf->buf_size = newsize;
