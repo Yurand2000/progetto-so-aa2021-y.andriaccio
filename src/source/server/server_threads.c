@@ -24,7 +24,7 @@
 int prepare_shared_data(shared_state* state, int socket, cfg_t* config)
 {
 	return init_shared_state(state, config->algorithm, config->storage_capacity,
-		config->max_files, config->max_connections, socket);
+		config->max_files, config->max_connections, socket, pthread_self());
 }
 
 int prepare_threads(pthread_t** threads, size_t* threads_count, worker_data** work_data,

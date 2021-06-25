@@ -7,7 +7,7 @@
 #include "errset.h"
 
 int init_shared_state(shared_state* ss, char cache_miss, long max_storage,
-	int max_files, int max_conns, int acceptor)
+	int max_files, int max_conns, int acceptor, pthread_t main_thread)
 {
 	if (ss == NULL) ERRSET(EINVAL, -1);
 
@@ -16,6 +16,7 @@ int init_shared_state(shared_state* ss, char cache_miss, long max_storage,
 	ss->ro_max_files = max_files;
 	ss->ro_max_conns = max_conns;
 	ss->ro_acceptor_fd = acceptor;
+	ss->ro_main_thread = main_thread;
 
 	ERRCHECK(pthread_mutex_init(&ss->state_mux, NULL));
 	MALLOC(ss->clients, sizeof(client_state) * ss->ro_max_conns);

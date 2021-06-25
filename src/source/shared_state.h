@@ -20,6 +20,7 @@ typedef struct shared_state
 	int ro_max_files;
 	int ro_max_conns;
 	int ro_acceptor_fd;
+	pthread_t ro_main_thread;
 
 	//mux shared by all threads
 	pthread_mutex_t state_mux;
@@ -36,7 +37,7 @@ typedef struct shared_state
 
 
 int init_shared_state(shared_state* ss, char cache_miss, long max_storage,
-	int max_files, int max_conns, int acceptor);
+	int max_files, int max_conns, int acceptor, pthread_t main_thread);
 int destroy_shared_state(shared_state* ss);
 
 int add_client(shared_state* ss, int conn);

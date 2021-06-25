@@ -82,7 +82,7 @@ void* worker_routine(void* args)
 			data->do_work = WORKER_DONE;
 			THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));
 
-			THREAD_ERRCHECK(raise(SIGUSR1));	//tell the main thread it has finished working
+			THREAD_ERRCHECK(pthread_kill(data->shared->ro_main_thread, SIGUSR1));	//tell the main thread it has finished working
 		}
 	}
 }

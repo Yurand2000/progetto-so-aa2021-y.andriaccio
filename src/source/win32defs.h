@@ -27,6 +27,8 @@ typedef int pthread_cond_t;
 typedef int pthread_t;
 typedef int pthread_attr_t;
 
+pthread_t pthread_self(void);
+int pthread_kill(pthread_t thread, int sig);
 int pthread_mutex_init(pthread_mutex_t* mux, const void*);
 int pthread_mutex_destroy(pthread_mutex_t* mux);
 int pthread_mutex_lock(pthread_mutex_t* mux);
