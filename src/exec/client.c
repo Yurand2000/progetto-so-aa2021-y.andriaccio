@@ -8,6 +8,7 @@
 #include <time.h>
 
 #define _DEBUG
+#define CLIENT_API_ENABLE
 
 #include "../source/client_api.h"
 
@@ -175,7 +176,7 @@ int main(int argc, char* argv[])
 			break;
 		case REQUEST_READ:
 			res = readFile(reqs[i].stringdata, &buf, &size);
-			REQ_FAIL(res);
+			REQ_FAIL(res)
 			else if (reqs[i].dir != NULL)
 			{
 				//create file and write buf data
