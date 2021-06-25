@@ -203,7 +203,7 @@ int readNFiles(int n, const char* dirname)
 int writeFile(const char* pathname, const char* dirname)
 {
 	SOCK_VALID(conn);
-	size_t len; FILENAME_VALID(dirname, &len);
+	size_t len; if(dirname != NULL) FILENAME_VALID(dirname, &len);
 	FILENAME_VALID(pathname, &len); len++;
 
 	//open file, check if it exists
@@ -262,7 +262,8 @@ int writeFile(const char* pathname, const char* dirname)
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname)
 {
 	SOCK_VALID(conn);
-	size_t len; FILENAME_VALID(pathname, &len); len++;
+	size_t len; if (dirname != NULL) FILENAME_VALID(dirname, &len);
+	FILENAME_VALID(pathname, &len); len++;
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_APPEND_FILE);
