@@ -151,7 +151,7 @@ int thread_has_finished(struct pollfd* poll_array, nfds_t poll_size,
 	worker_data* threads_data, size_t threads_count, int acceptor,
 	int* working_threads, cfg_t* config)
 {
-	int work_conn, new_conn;
+	int work_conn, new_conn, done;
 	for (size_t i = 0; i < threads_count; i++)
 	{
 		worker_data* th_data = &threads_data[i];
@@ -161,18 +161,24 @@ int thread_has_finished(struct pollfd* poll_array, nfds_t poll_size,
 			th_data->do_work = WORKER_IDLE;
 			work_conn = th_data->in_conn;
 			new_conn = th_data->add_conn;
+			done = 1;
 			(*working_threads)--;
 		}
 		ERRCHECK(pthread_mutex_unlock(&th_data->thread_mux));
 
-		//if work_conn == acceptor, add the new connection
-		if (work_conn == acceptor)
-			poll_array[poll_size - 2].fd = work_conn;
-		else if (work_conn > 0) //readd the connection to the poll list
-			ERRCHECK(add_connection_to_poll(poll_array, poll_size, work_conn, config));
+		if (done)
+		{
+			//if work_conn == acceptor, add the new connection
+			if (work_conn == acceptor)
+				poll_array[poll_size - 2].fd = work_conn;
+			else if (work_conn > 0) //readd the connection to the poll list
+				ERRCHECK(add_connection_to_poll(poll_array, poll_size, work_conn, config));
 
-		if (new_conn > 0) //new connection incoming
-			ERRCHECK(add_connection_to_poll(poll_array, poll_size, new_conn, config));
+			if (new_conn > 0) //new connection incoming
+				ERRCHECK(add_connection_to_poll(poll_array, poll_size, new_conn, config));
+
+			done = 0;
+		}
 	}
 	return 0;
 }
