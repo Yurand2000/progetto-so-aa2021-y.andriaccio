@@ -24,7 +24,7 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 
 	ERRCHECK(pthread_mutex_lock(&shared->state_mux));
 	int curr_files = shared->current_files;
-	ERRCHECK(pthread_mutex_lock(&shared->state_mux));
+	ERRCHECK(pthread_mutex_unlock(&shared->state_mux));
 	if (curr_files >= shared->ro_max_files)
 	{
 		do_log(log, -1, STRING_OPEN_CONN, "none", "Max clients connected.");
