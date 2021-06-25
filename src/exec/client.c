@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
 	//connect
 	struct timespec abstime; abstime.tv_sec = 10; abstime.tv_nsec = 0;
 	struct timespec waittime; waittime.tv_sec = 0; waittime.tv_nsec = time_between_reqs * 1000;
-	int res = openConnection(socket_name, time_between_reqs, abstime);
+	res = openConnection(socket_name, time_between_reqs, abstime);
 	if(res == -1)
 	{
 		printf("couldn't connect to server!\n");
@@ -185,7 +185,6 @@ int main(int argc, char* argv[])
 				fclose(fd);
 			}
 			free(buf);
-			free(size);
 			break;
 		case REQUEST_READN:
 			res = readNFiles(reqs[i].n, reqs[i].dir);
