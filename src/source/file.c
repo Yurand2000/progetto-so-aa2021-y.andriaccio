@@ -9,7 +9,7 @@
 #define UNLOCK(file) ERRCHECK(pthread_mutex_unlock(&file->mutex))
 
 #define CHECK_OPEN_FILE(file) {\
-	int opn = is_open_file(file);\
+	int opn = is_open_file_nolock(file);\
 	if (opn == -1) { UNLOCK(file); return -1; }\
 	if (opn == 1) ERRSETDO(EPERM, UNLOCK(file), -1);\
 }
@@ -113,6 +113,13 @@ int is_open_file(file_t* file)
 	else return 0;
 }
 
+int is_open_file_nolock(file_t* file)
+{
+	if (file == NULL) ERRSET(EINVAL, -1);
+	if (file->open_size == -1) return 1;
+	else return 0;
+}
+
 int is_locked_file(file_t* file, int who)
 {
 	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
@@ -160,7 +167,7 @@ int open_file(file_t* file, int who)
 	LOCK(file);
 	if (file->owner != OWNER_NULL)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
-	if (file->open_size > -1) { ERRSETDO(EPERM, UNLOCK(file), -1); }
+	if (is_open_file_nolock(file) == 0) { ERRSETDO(EPERM, UNLOCK(file), -1); }
 	else
 	{
 		file->owner = who;
@@ -190,7 +197,7 @@ int close_file(file_t* file, int who, long* difference)
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);	
-	if (file->open_size == -1) { UNLOCK(file); return 0; }
+	if(is_open_file_nolock(file) == 1) { UNLOCK(file); return 0; }
 	else
 	{
 		//compress the file open_data into the data pointer.

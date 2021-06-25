@@ -48,6 +48,9 @@ int check_file_name(file_t* file, char const* name);
 /* returns 0 on file open, 1 on file closed, -1 on error and sets errno. */
 int is_open_file(file_t* file);
 
+/* returns 0 on file open, 1 on file closed, -1 on error and sets errno. */
+int is_open_file_nolock(file_t* file);
+
 /* returns 0 on file locked, 1 on file unlocked, -1 on error and sets errno. */
 int is_locked_file(file_t* file, int who);
 
