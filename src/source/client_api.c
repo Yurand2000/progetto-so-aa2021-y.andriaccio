@@ -76,7 +76,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 	int check = is_server_message(&msg, MESSAGE_OCONN_ACK);
 	destroy_message(&msg);
-	if(check)
+	if(check == 0)
 		return 0;
 	else
 	{
