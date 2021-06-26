@@ -51,7 +51,7 @@ int reset_file_struct(file_t* file)
 
 int create_file_struct(file_t* file, char const* filename, int owner)
 {
-	if(file == NULL || filename == NULL || owner < OWNER_NULL) ERRSET(EINVAL, -1);
+	if(file == NULL || filename == NULL || owner <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	file->owner = owner;
 	file->fifo_creation_time = time(NULL);
@@ -122,7 +122,7 @@ int is_open_file_nolock(file_t* file)
 
 int is_locked_file(file_t* file, int who)
 {
-	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
+	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	int owner = file->owner;
 	UNLOCK(file);
@@ -162,13 +162,15 @@ int update_lru(file_t* file, char newval)
 
 int open_file(file_t* file, int who)
 {
-	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
+	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
-	if (is_open_file_nolock(file) == 0) { ERRSETDO(EPERM, UNLOCK(file), -1); }
-	else
+
+	int open = is_open_file_nolock(file);
+	if (open == -1) return -1;
+	else if(open == 1)
 	{
 		file->owner = who;
 		if (file->data_size == 0)
@@ -192,7 +194,7 @@ int open_file(file_t* file, int who)
 
 int close_file(file_t* file, int who, long* difference)
 {
-	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
+	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
@@ -227,7 +229,7 @@ int close_file(file_t* file, int who, long* difference)
 
 int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, size_t* read_size)
 {
-	if(file == NULL || who <= OWNER_NULL ||
+	if(file == NULL || who <= OWNER_NEXIST ||
 		out_data == NULL || out_data_size == NULL
 		|| read_size == NULL) ERRSET(EINVAL, -1);
 
@@ -276,7 +278,7 @@ int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t
  
 int write_file(file_t* file, int who, const void* data, size_t data_size)
 {
-	if(file == NULL || who <= OWNER_NULL ||
+	if(file == NULL || who <= OWNER_NEXIST ||
 		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 
 	LOCK(file);
@@ -297,7 +299,7 @@ int write_file(file_t* file, int who, const void* data, size_t data_size)
 
 int append_file(file_t* file, int who, const void* data, size_t data_size)
 {
-	if(file == NULL || who <= OWNER_NULL ||
+	if(file == NULL || who <= OWNER_NEXIST ||
 		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 
 	LOCK(file);
@@ -321,7 +323,7 @@ int append_file(file_t* file, int who, const void* data, size_t data_size)
 
 int lock_file(file_t* file, int who)
 {
-	if(file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
+	if(file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
@@ -336,7 +338,7 @@ int lock_file(file_t* file, int who)
 
 int unlock_file(file_t* file, int who)
 {
-	if(file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
+	if(file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
@@ -351,7 +353,7 @@ int unlock_file(file_t* file, int who)
 
 int remove_file(file_t* file, int who)
 {
-	if(file == NULL || who < OWNER_NULL) ERRSET(EINVAL, -1);
+	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	if (file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
