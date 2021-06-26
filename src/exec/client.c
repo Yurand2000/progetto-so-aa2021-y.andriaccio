@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <time.h>
 
-//#define _DEBUG
+#define _DEBUG
 #define CLIENT_API_ENABLE
 
 #include "../source/client_api.h"
@@ -18,6 +18,9 @@ static void print_help();
 //continue, if -1 the process shall return with error.
 static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs);
+
+static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* reqs_size);
+static int write_dir_to_last_request(req_t** reqs, size_t* curr_reqs);
 
 //expands the given directory to its files in requests.
 static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
@@ -38,7 +41,7 @@ int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
 	char currdir[FILENAME_MAX]; size_t currdir_size;
-	PERRCHECK(getcwd(currdir, FILENAME_MAX - 1) == NULL, "CWD Unexpected error: ");
+	PERRCHECK(getcwd(currdir, FILENAME_MAX - 1) == NULL, "CWD Unexpected error");
 	currdir_size = strlen(currdir);
 
 	//add trailing / if necessary
@@ -56,7 +59,7 @@ int main(int argc, char* argv[])
 	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
 	if (parse == 1) return 0;
-	else if (parse == -1) { perror("Error during parsing of command line commands: "); return -1; }
+	else if (parse == -1) { perror("Error during parsing of command line commands"); return -1; }
 
 	if (socket_name == NULL)
 	{
@@ -65,12 +68,8 @@ int main(int argc, char* argv[])
 	}
 	else
 	{
-#ifndef _DEBUG
 		ERRCHECKDO(access(socket_name, R_OK | W_OK),
 			printf("socket file does not exist. Has the server started?\n"));
-#else
-		printf("socket file: %s\n", socket_name);
-#endif
 	}
 
 	if (curr_reqs == 0) { print_help(); return 0; }
@@ -84,9 +83,9 @@ int main(int argc, char* argv[])
 		if (reqs[i].dir != NULL) printf(" dir: %s;", reqs[i].dir);
 		printf("\n");
 	}
-#endif
 
 	printf("\n\n-----------------------------------------------------------\n");
+#endif
 	//expand all requests that have a directory instead of a file. ------------
 	req_t* reqs_exp = NULL; size_t curr_reqs_exp = 0, reqs_size_exp = 0;
 	for (size_t i = 0; i < curr_reqs; i++)
@@ -120,9 +119,9 @@ int main(int argc, char* argv[])
 		if (reqs_exp[i].dir != NULL) printf(" dir: %s;", reqs_exp[i].dir);
 		printf("\n");
 	}
-#endif
-
 	printf("\n\n-----------------------------------------------------------\n");
+
+#endif
 	//add open/create and close requests. -------------------------------------
 	curr_reqs = 0;	//using the old reqs array, but as if it was empty.
 					//all old memory has already been cleared.
@@ -132,6 +131,7 @@ int main(int argc, char* argv[])
 
 	free(reqs_exp);
 
+#ifdef _DEBUG
 	//print all requests for testing
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
 		printf("\n");
 	}
 	printf("\n\n-----------------------------------------------------------\n");
+#endif
 
 	//call the client api -----------------------------------------------------
 #ifdef CLIENT_API_ENABLE
@@ -182,11 +183,21 @@ int main(int argc, char* argv[])
 			if (res != -1 && reqs[i].dir != NULL)
 			{
 				//create file and write buf data
-				fd = fopen(reqs[i].stringdata, "wb");
-				if (fd != NULL)
+				size_t dirlen = strlen(reqs[i].dir);
+				size_t len = strlen(reqs[i].stringdata) + 1;
+				char* file = malloc(len + dirlen);
+				if (file != NULL)
 				{
-					fwrite(buf, sizeof(char), size, fd);
-					fclose(fd);
+					strncpy(file, reqs[i].dir, dirlen);
+					strncpy(file + dirlen, reqs[i].stringdata, len);
+					fd = fopen(file, "wb");
+					if (fd != NULL)
+					{
+						fwrite(buf, sizeof(char), size, fd);
+						fclose(fd);
+					}
+					else perror("Write to file failure");
+					free(file);
 				}
 				else perror("Write to file failure");
 			}
@@ -265,10 +276,10 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			break;
 		//write command
 		case 'w':
-			CMD_TO_REQUEST(REQUEST_WRITE_DIR);
+			ERRCHECK(cmd_to_request(REQUEST_WRITE_DIR, reqs, curr_reqs, reqs_size));
 			break;
 		case 'W':
-			CMD_TO_REQUEST(REQUEST_WRITE);
+			ERRCHECK(cmd_to_request(REQUEST_WRITE, reqs, curr_reqs, reqs_size));
 			break;
 		case 'D':
 			if (prec != 'w' && prec != 'W')
@@ -278,14 +289,14 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 				return -1;
 			}
 			else
-				WRITE_DIR_TO_LAST_REQUEST
+				ERRCHECK(write_dir_to_last_request(reqs, curr_reqs));
 			break;
 		//read command
 		case 'r':
-			CMD_TO_REQUEST(REQUEST_READ);
+			ERRCHECK(cmd_to_request(REQUEST_READ, reqs, curr_reqs, reqs_size));
 			break;
 		case 'R':
-			CMD_TO_REQUEST(REQUEST_READN);
+			ERRCHECK(cmd_to_request(REQUEST_READN, reqs, curr_reqs, reqs_size));
 			break;
 		case 'd':
 			if (prec != 'r' && prec != 'R')
@@ -295,17 +306,17 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 				return -1;
 			}
 			else
-				WRITE_DIR_TO_LAST_REQUEST
+				ERRCHECK(write_dir_to_last_request(reqs, curr_reqs));
 			break;
 		//other commands
 		case 'l':
-			CMD_TO_REQUEST(REQUEST_LOCK);
+			ERRCHECK(cmd_to_request(REQUEST_LOCK, reqs, curr_reqs, reqs_size));
 			break;
 		case 'u':
-			CMD_TO_REQUEST(REQUEST_UNLOCK);
+			ERRCHECK(cmd_to_request(REQUEST_UNLOCK, reqs, curr_reqs, reqs_size));
 			break;
 		case 'c':
-			CMD_TO_REQUEST(REQUEST_REMOVE);
+			ERRCHECK(cmd_to_request(REQUEST_REMOVE, reqs, curr_reqs, reqs_size));
 			break;
 		//errors
 		case ':':
@@ -532,4 +543,53 @@ static void print_operation_result(const char* op_type, const char* file, int re
 	if(bytes_read != 0 || bytes_write != 0)
 		printf("; Bytes: read %d; write %d", bytes_read, bytes_write);
 	printf(".\n");
+}
+
+static int write_dir_to_last_request(req_t** reqs, size_t* curr_reqs)
+{
+	req_t* last = &(*reqs)[*curr_reqs - 1];
+	size_t len = strlen(optarg);
+	last->dir_len = len + 1;
+	if (optarg[last->dir_len - 2] != '/')
+		last->dir_len++;
+
+	MALLOC(last->dir, last->dir_len);
+
+	strncpy(last->dir, optarg, len + 1);
+	if (optarg[last->dir_len - 2] != '/')
+	{
+		last->dir[last->dir_len - 2] = '/';
+		last->dir[last->dir_len - 1] = '\0';
+	}
+}
+
+static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
+{
+	req_t request;
+	init_request(&request);
+	
+	request.type = type;
+	if(type == REQUEST_READN)
+	{
+		request.n = strtol(optarg, NULL, 0);
+	}
+	else if (type == REQUEST_WRITE_DIR)
+	{
+		char* saveptr = NULL;
+		char* token = strtok_r(optarg, ",", &saveptr);
+		request.stringdata_len = strlen(token) + 1;
+		MALLOC(request.stringdata, request.stringdata_len);
+		strncpy(request.stringdata, token, request.stringdata_len);
+		
+		token = strtok_r(NULL, ",", &saveptr);
+		if(token != NULL) request.n = strtol(token, NULL, 0);
+	}
+	else
+	{
+		request.stringdata_len = strlen(optarg) + 1;
+		MALLOC(request.stringdata, request.stringdata_len);
+		strncpy(request.stringdata, optarg, request.stringdata_len);
+	}
+	
+	ERRCHECK(add_request(request, reqs, curr_reqs, reqs_size));
 }

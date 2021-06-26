@@ -10,6 +10,7 @@
 #define X_OK 0
 #define F_OK 0
 
+char* optarg;
 typedef int ssize_t;
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
