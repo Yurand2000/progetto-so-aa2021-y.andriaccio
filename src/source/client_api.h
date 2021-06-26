@@ -42,4 +42,6 @@ int unlockFile(const char* pathname);
 int closeFile(const char* pathname);
 int removeFile(const char* pathname);
 
+int get_bytes_read_write(int* read, int* write);
+
 #endif

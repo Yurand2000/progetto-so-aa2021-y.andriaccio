@@ -89,8 +89,11 @@ int do_close_connection(int* conn, net_msg* in_msg, net_msg* out_msg,
 		}
 	}
 
+	set_checksum(&out_msg);
+	ERRCHECK(write_msg(*conn, &out_msg));
+
 	do_log(log, *conn, STRING_CLOSE_CONN, "none", "Connection closed");
-	remove_client(state, *conn);
+	ERRCHECK(remove_client(state, *conn));
 
 	//close the connection
 	close(*conn);

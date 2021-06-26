@@ -151,7 +151,7 @@ int thread_has_finished(struct pollfd* poll_array, nfds_t poll_size,
 	worker_data* threads_data, size_t threads_count, int acceptor,
 	int* working_threads, cfg_t* config)
 {
-	int work_conn, new_conn, done;
+	int work_conn, new_conn, done = 0;
 	for (size_t i = 0; i < threads_count; i++)
 	{
 		worker_data* th_data = &threads_data[i];

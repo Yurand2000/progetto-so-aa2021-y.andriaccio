@@ -32,6 +32,8 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 static int add_open_create_requests(req_t* req, req_t** reqs,
 	size_t* curr_reqs, size_t* reqs_size);
 
+static void print_operation_result(const char* op_type, const char* file, int res);
+
 int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
@@ -142,7 +144,7 @@ int main(int argc, char* argv[])
 
 	//call the client api -----------------------------------------------------
 #ifdef CLIENT_API_ENABLE
-#define REQ_FAIL(res) if (res == -1) { perror("Request failure: "); }
+#define DO_PRINT(op, file, res) if (do_print) print_operation_result(op, file, res);
 
 	int res; FILE* fd;
 	void* buf = NULL; size_t size = 0;
@@ -164,20 +166,20 @@ int main(int argc, char* argv[])
 		{
 		case REQUEST_OPEN:
 			res = openFile(reqs[i].stringdata, 0);
-			REQ_FAIL(res);
+			DO_PRINT("Open File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_CREATE_LOCK:
 			res = openFile(reqs[i].stringdata, O_CREATE | O_LOCK);
-			REQ_FAIL(res);
+			DO_PRINT("Create and Lock File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_CLOSE:
 			res = closeFile(reqs[i].stringdata);
-			REQ_FAIL(res);
+			DO_PRINT("Close File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_READ:
 			res = readFile(reqs[i].stringdata, &buf, &size);
-			REQ_FAIL(res)
-			else if (reqs[i].dir != NULL)
+			DO_PRINT("Read File", reqs[i].stringdata, res);
+			if (res != -1 && reqs[i].dir != NULL)
 			{
 				//create file and write buf data
 				PTRCHECK( (fd = fopen(reqs[i].stringdata, "wb")) );
@@ -188,23 +190,23 @@ int main(int argc, char* argv[])
 			break;
 		case REQUEST_READN:
 			res = readNFiles(reqs[i].n, reqs[i].dir);
-			REQ_FAIL(res);
+			DO_PRINT("Read N Files", reqs[i].stringdata, res);
 			break;
 		case REQUEST_WRITE:
 			res = writeFile(reqs[i].stringdata, reqs[i].dir);
-			REQ_FAIL(res);
+			DO_PRINT("Write File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_LOCK:
 			res = lockFile(reqs[i].stringdata);
-			REQ_FAIL(res);
+			DO_PRINT("Lock File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_UNLOCK:
 			res = unlockFile(reqs[i].stringdata);
-			REQ_FAIL(res);
+			DO_PRINT("Unlock File", reqs[i].stringdata, res);
 			break;
 		case REQUEST_REMOVE:
 			res = removeFile(reqs[i].stringdata);
-			REQ_FAIL(res);
+			DO_PRINT("Remove File", reqs[i].stringdata, res);
 			break;
 		default:
 			break;
@@ -512,4 +514,18 @@ static int add_open_create_requests(req_t* req, req_t** reqs,
 	}
 
 	return 0;
+}
+
+static void print_operation_result(const char* op_type, const char* file, int res)
+{
+	char* op_res = (res != -1) ? "Success" : strerror(errno);
+
+	int bytes_read, bytes_write;
+	get_bytes_read_write(&bytes_read, &bytes_write);
+	printf("Operation: %s; File: %s; Result: %s", op_type, file, op_res);
+	if(res > 0)
+		printf("; Files read: %d", res);
+	if(bytes_read != 0 || bytes_write != 0)
+		printf("; Bytes: read %d; write %d", bytes_read, bytes_write);
+	printf(".\n");
 }

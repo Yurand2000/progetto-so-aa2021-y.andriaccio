@@ -20,15 +20,19 @@
 
 /* the connection file (socket) is stored as a static variable hidden into this file. */
 static int conn = -1;
+static int byte_read = 0, byte_write = 0;
 
 static int save_cached_files(net_msg* msg, const char* dirname);
 
 static int write_buf_to_file(char const* filename, char* buf, size_t filesize, const char* dirname);
 
+static void clear_byte_read_write();
+
 #define CLOSE { close(conn); conn = -1; }
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime)
 {
+	clear_byte_read_write();
 	if(conn >= 0) ERRSET(EISCONN, -1);
 
 	size_t len; SOCKNAME_VALID(sockname, &len);
@@ -88,6 +92,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 int closeConnection(const char* sockname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 
 	//send close message, just to be polite with the server.
@@ -104,6 +109,7 @@ int closeConnection(const char* sockname)
 
 int openFile(const char* pathname, int flags)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -140,6 +146,7 @@ int openFile(const char* pathname, int flags)
 
 int readFile(const char* pathname, void** buf, size_t* size)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -157,11 +164,10 @@ int readFile(const char* pathname, void** buf, size_t* size)
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
 		{
 			ERRCHECKDO(pop_buf(&msg.data, sizeof(size_t), size), destroy_message(&msg));
-
 			MALLOCDO(*buf, (sizeof(char) * (*size)), destroy_message(&msg));
-
 			ERRCHECKDO(pop_buf(&msg.data, *size, *buf), { destroy_message(&msg); free(*buf); });
 
+			byte_read += *size;
 			destroy_message(&msg);
 		}
 		else if(HASFLAG(flags, MESSAGE_FILE_NPERM))
@@ -178,6 +184,7 @@ int readFile(const char* pathname, void** buf, size_t* size)
 
 int readNFiles(int n, const char* dirname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 
 	net_msg msg;
@@ -202,6 +209,7 @@ int readNFiles(int n, const char* dirname)
 
 int writeFile(const char* pathname, const char* dirname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; if(dirname != NULL) FILENAME_VALID(dirname, &len);
 	FILENAME_VALID(pathname, &len); len++;
@@ -225,6 +233,7 @@ int writeFile(const char* pathname, const char* dirname)
 	push_buf(&msg.data, sizeof(size_t), &file_size);
 	push_buf(&msg.data, len, pathname);
 	push_buf(&msg.data, sizeof(size_t), &len);
+	byte_write += file_size;
 
 	//if last read was 0, then it should have succeded into creating the message
 	free(buf);
@@ -261,6 +270,7 @@ int writeFile(const char* pathname, const char* dirname)
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; if (dirname != NULL) FILENAME_VALID(dirname, &len);
 	FILENAME_VALID(pathname, &len); len++;
@@ -273,6 +283,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 	push_buf(&msg.data, sizeof(size_t), &size);
 	push_buf(&msg.data, len, pathname);
 	push_buf(&msg.data, sizeof(size_t), &len);
+	byte_write += size;
 
 	set_checksum(&msg);
 
@@ -305,6 +316,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
 int lockFile(const char* pathname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -335,6 +347,7 @@ int lockFile(const char* pathname)
 
 int unlockFile(const char* pathname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -365,6 +378,7 @@ int unlockFile(const char* pathname)
 
 int closeFile(const char* pathname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -395,6 +409,7 @@ int closeFile(const char* pathname)
 
 int removeFile(const char* pathname)
 {
+	clear_byte_read_write();
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
@@ -448,6 +463,7 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 			buf_len = len;
 		}
 		ERRCHECKDO(pop_buf(&msg->data, (sizeof(char) * len), buf), { free(name); free(buf); });
+		byte_read += len;
 
 		//write to file
 		ERRCHECKDO(write_buf_to_file(name, buf, len, dirname), { free(name); free(buf); });
@@ -473,5 +489,18 @@ static int write_buf_to_file(char const* filename, char* buf, size_t filesize, c
 	fclose(out);
 
 	free(path);
+	return 0;
+}
+
+static void clear_byte_read_write()
+{
+	byte_read = byte_write = 0;
+}
+
+int get_bytes_read_write(int* read, int* write)
+{
+	if (read == NULL || write == NULL) ERRSET(EINVAL, -1);
+	*read = byte_read;
+	*write = byte_write;
 	return 0;
 }

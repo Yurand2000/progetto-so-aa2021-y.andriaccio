@@ -109,8 +109,13 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	create_message(&out_msg);
 
 	ERRCHECK(get_client_lastop(shared, *conn, &lastop));
-	if(CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_CONN))
+	if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_CONN))
+	{
 		ret = do_close_connection(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		destroy_message(&out_msg);
+		destroy_message(&in_msg);
+		return ret;
+	}
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_OPEN_FILE))
 		ret = do_open_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
