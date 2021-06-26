@@ -561,6 +561,7 @@ static int write_dir_to_last_request(req_t** reqs, size_t* curr_reqs)
 		last->dir[last->dir_len - 2] = '/';
 		last->dir[last->dir_len - 1] = '\0';
 	}
+	return 0;
 }
 
 static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
@@ -592,4 +593,5 @@ static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* req
 	}
 	
 	ERRCHECK(add_request(request, reqs, curr_reqs, reqs_size));
+	return 0;
 }
