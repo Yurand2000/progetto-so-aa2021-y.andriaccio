@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 			{
 				//create file and write buf data
 				fd = fopen(reqs[i].stringdata, "wb");
-				if (fd != -1)
+				if (fd != NULL)
 				{
 					fwrite(buf, sizeof(char), size, fd);
 					fclose(fd);
