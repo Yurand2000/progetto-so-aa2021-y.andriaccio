@@ -37,7 +37,7 @@ int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		{
 			out_msg->type |= MESSAGE_OP_SUCC;
 
-			ERRCHECK(push_buf(&out_msg->data, sizeof(char) * read_size, &buf));
+			ERRCHECK(push_buf(&out_msg->data, sizeof(char) * read_size, buf));
 			ERRCHECK(push_buf(&out_msg->data, sizeof(size_t), &read_size));
 			free(buf);
 
