@@ -169,7 +169,7 @@ int open_file(file_t* file, int who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
 
 	int open = is_open_file_nolock(file);
-	if (open == -1) return -1;
+	if (open == -1) { UNLOCK(file); return -1; }
 	else if(open == 1)
 	{
 		file->owner = who;
@@ -186,10 +186,10 @@ int open_file(file_t* file, int who)
 
 		file->lfu_frequency += 1;
 		file->lru_clock = 1;
-
-		UNLOCK(file);
-		return 0;
 	}
+
+	UNLOCK(file);
+	return 0;
 }
 
 int close_file(file_t* file, int who, long* difference)
