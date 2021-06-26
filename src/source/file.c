@@ -165,7 +165,7 @@ int open_file(file_t* file, int who)
 	if (file == NULL || who <= OWNER_NULL) ERRSET(EINVAL, -1);
 
 	LOCK(file);
-	if (file->owner != OWNER_NULL)
+	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
 	if (is_open_file_nolock(file) == 0) { ERRSETDO(EPERM, UNLOCK(file), -1); }
 	else
