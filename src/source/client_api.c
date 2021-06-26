@@ -421,7 +421,7 @@ int removeFile(const char* pathname)
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
 
-	int check = is_server_message(&msg, MESSAGE_RFILE_ACK);
+	int check = is_server_message(&msg, MESSAGE_RMFILE_ACK);
 	destroy_message(&msg);
 	if(check == 0)
 	{
