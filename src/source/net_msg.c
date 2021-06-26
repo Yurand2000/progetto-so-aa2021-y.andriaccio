@@ -8,11 +8,11 @@
 #include "errset.h"
 #include "readn_writen.h"
 
-typedef struct
+typedef struct msg_header
 {
 	uint32_t type;
-	uint64_t checksum;
 	size_t len;
+	uint64_t checksum;
 } msg_header;
 
 //write and read msg heads and body to file
