@@ -152,7 +152,8 @@ int main(int argc, char* argv[])
 
 	//connect
 	struct timespec abstime; abstime.tv_sec = 10; abstime.tv_nsec = 0;
-	struct timespec waittime; waittime.tv_sec = 0; waittime.tv_nsec = time_between_reqs * 1000;
+	long nsec = time_between_reqs * 1000000;
+	struct timespec waittime; waittime.tv_sec = nsec / 1000000000; waittime.tv_nsec = nsec % 1000000000;
 	res = openConnection(socket_name, time_between_reqs, abstime);
 	if(res == -1)
 	{
@@ -277,6 +278,13 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			break;
 		case 't':
 			*time_between_reqs = (int)strtol(optarg, NULL, 0);
+			if (*time_between_reqs < 0)
+			{
+				printf("time between requests can't be negative. "
+					"Sorry, we can't go back in time yet... "
+					"Start with -h for details.\n");
+				return -1;
+			}
 			break;
 		//write command
 		case 'w':
