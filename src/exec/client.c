@@ -169,6 +169,10 @@ int main(int argc, char* argv[])
 			res = openFile(reqs[i].stringdata, 0);
 			DO_PRINT("Open File", reqs[i].stringdata, res);
 			break;
+		case REQUEST_OPEN_LOCK:
+			res = openFile(reqs[i].stringdata, O_LOCK);
+			DO_PRINT("Open Lock File", reqs[i].stringdata, res);
+			break;
 		case REQUEST_CREATE_LOCK:
 			res = openFile(reqs[i].stringdata, O_CREATE | O_LOCK);
 			DO_PRINT("Create and Lock File", reqs[i].stringdata, res);
