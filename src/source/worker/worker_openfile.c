@@ -80,18 +80,30 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 			}
 			else
 			{
-				out_msg->type |= MESSAGE_OP_SUCC;
-
 				ERRCHECK(pthread_mutex_lock(&state->state_mux));
 				state->current_files++;
 				if (state->current_files > state->max_reached_files)
 					state->max_reached_files = state->current_files;
 				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 
-				if (GETFLAGS(in_msg->type) & MESSAGE_OPEN_OLOCK)
-					strncpy(lastop_writefile_pname, name, FILE_NAME_MAX_SIZE);
+				int opn = open_file(&files[nof], owner);
+				if (opn == 0)
+				{
+					out_msg->type |= MESSAGE_OP_SUCC;
 
-				do_log(log, *conn, STRING_OPEN_FILE, name, "Success.");
+					if (GETFLAGS(in_msg->type) & MESSAGE_OPEN_OLOCK)
+						strncpy(lastop_writefile_pname, name, FILE_NAME_MAX_SIZE);
+
+					do_log(log, *conn, STRING_OPEN_FILE, name, "Success.");
+				}
+				else
+				{
+					//file error!
+					ERRCHECK(write_msg(*conn, out_msg));
+
+					do_log(log, *conn, STRING_OPEN_FILE, name, "File error.");
+					return -1;
+				}
 			}
 		}
 	}
