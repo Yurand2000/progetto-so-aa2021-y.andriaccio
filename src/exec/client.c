@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <time.h>
 
-#define _DEBUG
+//#define _DEBUG
 #define CLIENT_API_ENABLE
 
 #include "../source/client_api.h"
@@ -182,9 +182,13 @@ int main(int argc, char* argv[])
 			if (res != -1 && reqs[i].dir != NULL)
 			{
 				//create file and write buf data
-				PTRCHECK( (fd = fopen(reqs[i].stringdata, "wb")) );
-				fwrite(buf, sizeof(char), size, fd);
-				fclose(fd);
+				fd = fopen(reqs[i].stringdata, "wb");
+				if (fd != -1)
+				{
+					fwrite(buf, sizeof(char), size, fd);
+					fclose(fd);
+				}
+				else perror("Write to file failure");
 			}
 			free(buf);
 			break;
