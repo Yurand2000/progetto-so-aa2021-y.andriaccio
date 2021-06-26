@@ -76,6 +76,7 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 
 			//write file
 			int ret = write_file(&files[file], *conn, buf, buf_size);
+			free(buf);
 			if (ret == -1)
 			{
 				//release storage
