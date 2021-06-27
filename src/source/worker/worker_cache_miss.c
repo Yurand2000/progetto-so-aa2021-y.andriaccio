@@ -75,11 +75,14 @@ int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
 	time_t temp;
 	for (size_t i = 0; i < file_num; i++)
 	{
-		get_usage_data(&files[i], &temp, NULL, NULL);
-		if (temp < curr_older_time)
+		if (is_existing_file(&files[i]))
 		{
-			curr_older_time = temp;
-			curr_older = i;
+			get_usage_data(&files[i], &temp, NULL, NULL);
+			if (temp < curr_older_time)
+			{
+				curr_older_time = temp;
+				curr_older = i;
+			}
 		}
 	}
 
