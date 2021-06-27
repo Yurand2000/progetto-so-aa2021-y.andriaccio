@@ -23,7 +23,8 @@ int cache_miss(file_t* files, size_t file_num, shared_state* state, net_msg* out
 		evict_FIFO(files, file_num, state, &buf, &buf_size, &name, &name_size);
 	default:
 		break;
-	}	
+	}
+	ERRCHECKDO(convert_slashes_to_underscores(name), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * buf_size, buf), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &buf_size), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * name_size, name), { free(buf); free(name); });
@@ -52,6 +53,17 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 	state->current_storage -= storage;
 	state->current_files--;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+	return 0;
+}
+
+int convert_slashes_to_underscores(char* name)
+{
+	int i = 0;
+	while (name[i] != '\0' || i < FILE_NAME_MAX_SIZE)
+	{
+		if (name[i] == '/') name[i] = '_';
+		i++;
+	}
 	return 0;
 }
 

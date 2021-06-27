@@ -59,9 +59,14 @@ int main(int argc, char* argv[])
 	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
 	if (parse == 1) return 0;
-	else if (parse == -1) { perror("Error during parsing of command line commands"); return -1; }
+	else if (parse == -1)
+	{
+		if(errno != 0)
+			perror("Error");
+		return -1;
+	}
 
-	if (socket_name == NULL)
+	if (socket_name == NULL || socket_name[0] == '\0')
 	{
 		printf("-f flag is mandatory. start with -h for details.\n");
 		return -1;
