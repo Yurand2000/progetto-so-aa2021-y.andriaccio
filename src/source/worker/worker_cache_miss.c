@@ -45,6 +45,7 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 	size_t storage;
 	ERRCHECK(get_size(&files[file], &storage));
 
+	ERRCHECK(force_open_file(&files[file]));
 	ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
 	ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
 	ERRCHECK(force_remove_file(&files[file]));

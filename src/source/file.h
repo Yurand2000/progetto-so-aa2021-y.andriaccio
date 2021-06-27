@@ -9,6 +9,7 @@
 
 #define OWNER_NEXIST -1
 #define OWNER_NULL 0
+#define OWNER_ADMIN 1024
 #define FILE_NAME_MAX_SIZE 256
 
 typedef struct file_struct {
@@ -75,6 +76,8 @@ int lock_file(file_t* file, int who);
 int unlock_file(file_t* file, int who);
 int remove_file(file_t* file, int who);
 
+/* forcefully open the file. */
+int force_open_file(file_t* file);
 /* forcefully read the whole file into the given buffer, reallocating if necessary. */
 int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t* read_size);
 /* forcefully removes a file, regardless of its state. */

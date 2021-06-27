@@ -44,8 +44,22 @@ int destroy_file_struct(file_t* file)
 
 int reset_file_struct(file_t* file)
 {
-	ERRCHECK(destroy_file_struct(file));
-	ERRCHECK(init_file_struct(file));
+	if (file == NULL) ERRSET(EINVAL, -1);
+
+	free(file->data);
+	free(file->open_data);
+
+	file->owner = OWNER_NEXIST;
+	file->name[0] = '\0';
+	file->data_size = 0;
+	file->open_size = -1;
+	file->new_size = 0;
+	file->data = NULL;
+	file->open_data = NULL;
+
+	file->fifo_creation_time = 0;
+	file->lfu_frequency = 0;
+	file->lru_clock = 0;
 	return 0;
 }
 
@@ -172,7 +186,6 @@ int open_file(file_t* file, int who)
 	if (open == -1) { UNLOCK(file); return -1; }
 	else if(open == 1)
 	{
-		file->owner = who;
 		if (file->data_size == 0)
 			file->open_size = 0;
 		else
@@ -183,11 +196,11 @@ int open_file(file_t* file, int who)
 			MALLOC(file->open_data, file->open_size);
 			memcpy(file->open_data, file->data, file->data_size);
 		}
-
-		file->lfu_frequency += 1;
-		file->lru_clock = 1;
 	}
 
+	file->owner = who;
+	file->lfu_frequency += 1;
+	file->lru_clock = 1;
 	UNLOCK(file);
 	return 0;
 }
@@ -253,26 +266,26 @@ int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, siz
 	return 0;
 }
 
+int force_open_file(file_t* file)
+{
+	if (file == NULL) ERRSET(EINVAL, -1);
+	LOCK(file);
+	file->owner = OWNER_ADMIN;
+	UNLOCK(file);
+
+	ERRCHECK(open_file(file, OWNER_ADMIN));
+	return 0;
+}
+
 int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t* read_size)
 {
 	if (file == NULL || out_data == NULL || out_data_size == NULL
 		|| read_size == NULL) ERRSET(EINVAL, -1);
-
 	LOCK(file);
-	CHECK_OPEN_FILE(file);
-	if (*out_data_size <= file->open_size)
-	{
-		void* out;
-		REALLOCDO(out, *out_data, file->open_size, { UNLOCK(file); });
-		*out_data = out;
-		*out_data_size = file->open_size;
-	}
-
-	*read_size = file->open_size;
-	memcpy(*out_data, file->open_data, file->open_size);
-	file->lfu_frequency += 1;
-	file->lru_clock = 1;
+	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
+
+	ERRCHECK(read_file(file, OWNER_ADMIN, out_data, out_data_size, read_size));
 	return 0;
 }
  
@@ -355,20 +368,20 @@ int remove_file(file_t* file, int who)
 {
 	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
-	if (file->owner != who)
+	if (file->owner == OWNER_NULL || file->owner != who)
 		ERRSETDO(EPERM, UNLOCK(file), -1);
-	CHECK_OPEN_FILE(file);
+	ERRCHECKDO(reset_file_struct(file), UNLOCK(file));
 	UNLOCK(file);
-
-	return reset_file_struct(file);	
+	return 0;	
 }
 
 int force_remove_file(file_t* file)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
-	file->owner = OWNER_NEXIST;
+	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 
-	return reset_file_struct(file);
+	ERRCHECK(remove_file(file, OWNER_ADMIN));
+	return 0;
 }
