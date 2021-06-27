@@ -108,6 +108,7 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 		i++;
 	}
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &count), { free(buf); });
+	out_msg->type |= MESSAGE_OP_SUCC;
 	free(buf);
 
 	do_log(log, *conn, STRING_READN_FILE, "none", "Success.");

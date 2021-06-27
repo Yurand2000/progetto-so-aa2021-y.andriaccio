@@ -198,7 +198,10 @@ int readNFiles(int n, const char* dirname)
 	{
 		msg_t flags = GETFLAGS(msg.type);
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
-		{ ERRCHECKDO(save_cached_files(&msg, dirname), { destroy_message(&msg); }); }
+		{
+			if(dirname != NULL)
+				ERRCHECKDO(save_cached_files(&msg, dirname), { destroy_message(&msg); });
+		}
 		else
 		{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 
