@@ -364,18 +364,21 @@ static void print_help()
 "                        directory \"dirname\" to the server\n"\
 "[-D dirname]          - This option goes only with -w or -W. Specifies a folder\n"\
 "                        to write cachemiss files expelled from the server.\n"\
-"                        Can be not specified.\n"\
+"                        It is optional.\n"\
 "---- Read file commands: ---------------------------------------\n"\
 "-r file1[,file2]      - Read the specified file[s] from the file server.\n"\
-"                        -d option mandatory for this command.\n"\
-"-R [n=0]              - Read any n (if n == 0 then all) from the file server.\n"\
-"                        -d option is mandatory for this command.\n"\
+"                        -d option optional for this command.\n"\
+"-R[n=0]               - Read any n (if n == 0 then all) from the file server.\n"\
+"                        -d option is optional for this command.\n"\
+"                        Note that the optional argument must have no spaces\n"\
+"                        with the -R option, otherwise it will be skipped.\n"\
 "-d dirname            - This option goes only with -r or -R. Specifies a folder\n"\
-"                        to save read files. Can be not specified.\n"\
+"                        to save read files. It is optional.\n"\
 "---- File operation commands: ----------------------------------\n"\
 "-l file1[,file2]      - Files to acquire mutual exclusion on its operations.\n"\
 "-u file1[,file2]      - Files to release mutual exclusion on its operations.\n"\
-"-c file1[,file2]      - Files to remove from the server if present.\n"
+"-c file1[,file2]      - Files to remove from the server if present.\n"\
+"                        The operation requires mutual exclusion on the files.\n\n"
 
 	printf(HELP_TEXT);
 	fflush(stdout);
@@ -584,7 +587,8 @@ static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* req
 	request.type = type;
 	if(type == REQUEST_READN)
 	{
-		request.n = strtol(optarg, NULL, 0);
+		if(optarg != NULL)
+			request.n = strtol(optarg, NULL, 0);
 	}
 	else if (type == REQUEST_WRITE_DIR)
 	{
