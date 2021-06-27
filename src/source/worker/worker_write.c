@@ -65,7 +65,11 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 				count++;
 			}
-			if (count > 0) push_buf(&out_msg->data, sizeof(size_t), &count);
+			if (count > 0)
+			{
+				out_msg->type |= MESSAGE_FILE_CHACEMISS;
+				push_buf(&out_msg->data, sizeof(size_t), &count);
+			}
 
 			//reserve storage
 			ERRCHECK(pthread_mutex_lock(&state->state_mux));
@@ -161,7 +165,11 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 			count++;
 		}
-		if (count > 0) push_buf(&out_msg->data, sizeof(size_t), &count);
+		if (count > 0)
+		{
+			out_msg->type |= MESSAGE_FILE_CHACEMISS;
+			push_buf(&out_msg->data, sizeof(size_t), &count);
+		}
 
 		//reserve storage
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
