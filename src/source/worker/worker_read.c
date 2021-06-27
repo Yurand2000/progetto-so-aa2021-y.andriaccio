@@ -76,15 +76,22 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 	SET_EMPTY_STRING(lastop_writefile_pname);
 
 	out_msg->type = MESSAGE_RNFILE_ACK;
-	int n; size_t count = 0;
+	int n, wasopen; size_t count = 0;
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(int), &n));
 
-	size_t i = 0;
+	size_t i = 0; long diff;
 	void* buf = NULL; size_t buf_size = 0, read_size;
 	while (i < file_num && (n <= 0 || count < n))
 	{
-		if ((is_existing_file(&files[i]) == 0) && (is_open_file(&files[i]) == 0))
+		wasopen = 1;
+		if ((is_existing_file(&files[i]) == 0))
 		{
+			if (is_open_file(&files[i]) == 1)
+			{
+				ERRCHECKDO(open_file(&files[i], *conn), { free(buf); });
+				wasopen = 0;
+			}
+
 			if(read_file(&files[i], *conn, &buf, &buf_size, &read_size) == -1)
 			{
 				do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
@@ -93,6 +100,15 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 			}
 			ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
 			ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+
+			if (wasopen == 0)
+			{
+				ERRCHECKDO(close_file(&files[i], *conn, &diff), { free(buf); });
+
+				ERRCHECK(pthread_mutex_lock(&state->state_mux));
+				state->current_storage -= diff;
+				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+			}
 
 			if(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size) == -1)
 			{
@@ -103,7 +119,7 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 			ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
 			ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
 			ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
-			count++;
+			count++;			
 		}
 		i++;
 	}
