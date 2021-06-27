@@ -218,7 +218,7 @@ int close_file(file_t* file, int who, long* difference)
 		//compress the file open_data into the data pointer.
 		if (file->open_size > 0)
 		{
-			size_t old_size = file->data_size;
+			size_t old_size = file->data_size + file->open_size;
 
 			//compression not implemented yet.
 			file->data_size = file->open_size;
