@@ -75,7 +75,9 @@ int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
 	time_t temp;
 	for (size_t i = 0; i < file_num; i++)
 	{
-		if (is_existing_file(&files[i]))
+		int res = is_existing_file(&files[i]);
+		ERRCHECK(res);
+		if (res == 0)
 		{
 			get_usage_data(&files[i], &temp, NULL, NULL);
 			if (temp < curr_older_time)
@@ -100,11 +102,16 @@ int evict_LRU(file_t* files, size_t file_num, shared_state* state,
 
 	for (size_t i = 0; i < file_num && temp; i++)
 	{
-		get_usage_data(&files[clock_pos], NULL, NULL, &temp);
-		if (temp)
+		int res = is_existing_file(&files[i]);
+		ERRCHECK(res);
+		if (res == 0)
 		{
-			update_lru(&files[clock_pos], 0);
-			clock_pos = (clock_pos + 1) % file_num;
+			get_usage_data(&files[clock_pos], NULL, NULL, &temp);
+			if (temp)
+			{
+				update_lru(&files[clock_pos], 0);
+				clock_pos = (clock_pos + 1) % file_num;
+			}
 		}
 	}
 
@@ -120,11 +127,16 @@ int evict_LFU(file_t* files, size_t file_num, shared_state* state,
 	int temp;
 	for (size_t i = 0; i < file_num; i++)
 	{
-		get_usage_data(&files[i], NULL, &temp, NULL);
-		if (temp < curr_least_used_freq)
+		int res = is_existing_file(&files[i]);
+		ERRCHECK(res);
+		if (res == 0)
 		{
-			curr_least_used_freq = temp;
-			curr_least_used = i;
+			get_usage_data(&files[i], NULL, &temp, NULL);
+			if (temp < curr_least_used_freq)
+			{
+				curr_least_used_freq = temp;
+				curr_least_used = i;
+			}
 		}
 	}
 
