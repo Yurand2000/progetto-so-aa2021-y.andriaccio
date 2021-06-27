@@ -251,7 +251,7 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs)
 {
 	int option, prec;
-	while((option = getopt(argc, argv, "+:hf:w:W:D:r:R::d:t:l:u:c:p")) != -1)
+	while((option = getopt(argc, argv, "-:hf:w:W:D:r:R::d:t:l:u:c:p")) != -1)
 	{
 		switch(option)
 		{
@@ -280,7 +280,7 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			*time_between_reqs = (int)strtol(optarg, NULL, 0);
 			if (*time_between_reqs < 0)
 			{
-				printf("time between requests can't be negative. "
+				printf("Time between requests can't be negative. "
 					"Sorry, we can't go back in time yet... "
 					"Start with -h for details.\n");
 				return -1;
@@ -332,11 +332,14 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 			break;
 		//errors
 		case ':':
-			printf("argument missing error. Start with -h for details.\n");
+			printf("Argument missing error. Start with -h for details.\n");
 			return -1;
 		case '?':
 		default:
-			printf("unspecified error!\n");
+			printf("Unspecified error!\n");
+			return -1;
+		case 1:
+			printf("The given options are not formatted correctly. Start with -h for details.\n");
 			return -1;
 		}
 		prec = option;
