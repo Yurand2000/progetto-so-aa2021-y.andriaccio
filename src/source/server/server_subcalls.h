@@ -47,7 +47,7 @@ int poll_call(struct pollfd* poll_array, nfds_t poll_size,
 
 int after_poll_signal(struct pollfd* poll_array, nfds_t poll_size, pthread_t* threads,
 	worker_data* threads_data, size_t threads_count, int acceptor,
-	int* working_threads, int* exit, int* sighup, cfg_t* config);
+	int* working_threads, int* exit, int* sighup, cfg_t* config, shared_state* state);
 int after_poll_acceptor(struct pollfd* poll_array, nfds_t poll_size, pthread_t* threads,
 	worker_data* threads_data, size_t threads_count, int acceptor,
 	int* working_threads, int* exit, int* sighup, cfg_t* config);
@@ -57,7 +57,7 @@ int after_poll_connection(struct pollfd* poll_array, nfds_t poll_size, pthread_t
 
 int thread_assign_work(worker_data* threads_data,
 	size_t threads_count, int work_conn, int* working_threads);
-int sighup_do(struct pollfd* poll_array, nfds_t poll_size, int* sighup);
+int sighup_do(struct pollfd* poll_array, nfds_t poll_size, int acceptor, int* sighup, shared_state* state);
 int thread_has_finished(struct pollfd* poll_array, nfds_t poll_size,
 	worker_data* threads_data, size_t threads_count, int acceptor,
 	int* working_threads, cfg_t* config);

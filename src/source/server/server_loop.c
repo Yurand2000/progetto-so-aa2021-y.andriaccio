@@ -60,7 +60,7 @@ int poll_call(struct pollfd* poll_array, nfds_t poll_size,
 
 int after_poll_signal(struct pollfd* poll_array, nfds_t poll_size, pthread_t* threads,
 	worker_data* threads_data, size_t threads_count, int acceptor,
-	int* working_threads, int* exit, int* sighup, cfg_t* config)
+	int* working_threads, int* exit, int* sighup, cfg_t* config, shared_state* state)
 {
 	struct signalfd_siginfo in_signal;
 	ERRCHECK(readn(poll_array[poll_size - 1].fd, &in_signal, sizeof(struct signalfd_siginfo)));
@@ -77,7 +77,7 @@ int after_poll_signal(struct pollfd* poll_array, nfds_t poll_size, pthread_t* th
 	}
 	else if (in_signal.ssi_signo == SIGHUP)
 	{
-		ERRCHECK(sighup_do(poll_array, poll_size, sighup));
+		ERRCHECK(sighup_do(poll_array, poll_size, acceptor, sighup, state));
 	}
 	else if (in_signal.ssi_signo == SIGUSR1)
 	{
@@ -140,9 +140,12 @@ int thread_assign_work(worker_data* threads_data,
 	else return 0;
 }
 
-int sighup_do(struct pollfd* poll_array, nfds_t poll_size, int* sighup)
+int sighup_do(struct pollfd* poll_array, nfds_t poll_size, int acceptor, int* sighup, shared_state* state)
 {
-	ERRCHECK(close(poll_array[poll_size - 2].fd));
+	ERRCHECK(pthread_mutex_lock(&state->state_mux));
+	ERRCHECK(close(acceptor));
+	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+	poll_array[poll_size - 2].fd = -1;
 	*sighup = 1;
 	return 0;
 }

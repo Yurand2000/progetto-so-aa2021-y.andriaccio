@@ -80,7 +80,7 @@ int main(int argc, char* argv[])
 			{
 				PERRCHECK(after_poll_signal(poll_array, poll_size, threads,
 					threads_data, threads_count,
-					sck, &working_threads, &exit, &sighup, &config_data),
+					sck, &working_threads, &exit, &sighup, &config_data, &state),
 					"Signal handling error");
 			}
 			else if (poll_array[poll_size - 2].revents & POLLIN) //check acceptor

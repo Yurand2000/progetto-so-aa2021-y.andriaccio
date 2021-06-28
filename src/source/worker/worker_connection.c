@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
+int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 {
 	net_msg in_msg, out_msg;
 
@@ -31,7 +31,9 @@ int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared)
 		ERRSET(ENFILE, -1);
 	}
 
-	ERRCHECK((*newconn = accept(*conn, NULL, 0)));
+	ERRCHECK(pthread_mutex_lock(&shared->state_mux));
+	ERRCHECK((*newconn = accept(*acceptor, NULL, 0)));
+	ERRCHECK(pthread_mutex_unlock(&shared->state_mux));
 
 	//waiting for a message from the new connection, otherwise drop it.
 	//need a timeout!!
