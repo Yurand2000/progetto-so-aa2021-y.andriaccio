@@ -529,7 +529,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			{
 				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
 				if ((*out_reqs)[j].type == REQUEST_OPEN &&
-					strncp((*out_reqs)[j].stringdata == req->stringdata) == 0) insert == -1;
+					strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = -1;
 			}
 
 			if (insert != -1)
@@ -575,7 +575,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			{
 				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
 				if ((*out_reqs)[j].type == REQUEST_OPEN &&
-					strncp((*out_reqs)[j].stringdata == req->stringdata) == 0) insert == -1;
+					strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = -1;
 			}
 
 			if (insert == -1)
