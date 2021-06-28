@@ -193,7 +193,7 @@ int open_file(file_t* file, int who)
 			//decompress the file data into the open_data pointer.
 			//compression not implemented yet.
 			file->open_size = file->data_size;
-			MALLOC(file->open_data, file->open_size);
+			MALLOCDO(file->open_data, file->open_size, { UNLOCK(file); });
 			memcpy(file->open_data, file->data, file->data_size);
 		}
 	}
@@ -211,9 +211,10 @@ int close_file(file_t* file, int who, long* difference)
 
 	LOCK(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
-		ERRSETDO(EPERM, UNLOCK(file), -1);	
-	if(is_open_file_nolock(file) == 1) { UNLOCK(file); return 0; }
-	else
+		ERRSETDO(EPERM, UNLOCK(file), -1);
+	int open = is_open_file_nolock(file);
+	if (open == -1) { UNLOCK(file); return -1; }
+	else if(open == 0)
 	{
 		//compress the file open_data into the data pointer.
 		if (file->open_size > 0)
@@ -222,7 +223,7 @@ int close_file(file_t* file, int who, long* difference)
 
 			//compression not implemented yet.
 			file->data_size = file->open_size;
-			REALLOC(file->data, file->data, file->data_size);
+			REALLOCDO(file->data, file->data, file->data_size, { UNLOCK(file); });
 			memcpy(file->data, file->open_data, file->data_size);
 
 			*difference = (old_size - file->data_size);
@@ -233,11 +234,12 @@ int close_file(file_t* file, int who, long* difference)
 		file->open_size = -1;
 		file->new_size = 0;
 		file->owner = OWNER_NULL;
-		file->lfu_frequency += 1;
-		file->lru_clock = 1;
-		UNLOCK(file);
-		return 0;
 	}
+
+	file->lfu_frequency += 1;
+	file->lru_clock = 1;
+	UNLOCK(file);
+	return 0;
 }
 
 int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, size_t* read_size)

@@ -2,6 +2,8 @@
 #include "win32defs.h"
 
 #include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
 
 #include "hash.h"
@@ -89,6 +91,7 @@ int read_msg(int fileno, net_msg* msg)
 static int write_msghead(int fileno, const net_msg* msg)
 {
 	msg_header head;
+	memset(&head, 0, sizeof(msg_header));
 	head.type = msg->type;
 	head.checksum = msg->checksum;
 	head.len = msg->data.buf_size;

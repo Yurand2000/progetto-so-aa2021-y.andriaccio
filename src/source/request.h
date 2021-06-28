@@ -34,7 +34,7 @@ int init_request(req_t* req);
 //destroys the request structure, returns 0 on success, -1 on failure and sets errno.
 int destroy_request(req_t* req);
 
-//adds a request to a request array, reallocaing it if necessary.
+//adds a request to a request array, reallocating it if necessary.
 //returns 0 on success, -1 on failure and sets errno.
 //On memory error it destroys the whole array.
 int add_request(req_t newreq, req_t** reqs, size_t* curr_reqs, size_t* reqs_size);
