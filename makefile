@@ -56,14 +56,14 @@ client	: $(BLDEXE)/client.o $(OBJ_FILE)
 client_debug : CFLAGS += $(CDEBFLAGS)
 client_debug : client
 
-#test1 : server client
-#  @valgrind --leak-check=full $(BEXEC)/server.out -c ./tests/test1/test1.cfg &
-#  @./tests/test1/client.sh
-#  @fg
-#test2 : server client
-#  @$(BEXEC)/server.out -c ./tests/test2/test2.cfg &
-#  @./tests/test2/client.sh
-#  @fg
+test1 : server client
+  @valgrind --leak-check=full $(BEXEC)/server.out -c ./tests/test1/test1.cfg &
+  @./tests/test1/client.sh
+  @fg
+test2 : server client
+  @$(BEXEC)/server.out -c ./tests/test2/test2.cfg &
+  @./tests/test2/client.sh
+  @fg
 #test3 : server client
 #  @$(BEXEC)/server.out -c ./tests/test3/test3.cfg &
 #  @./tests/test3/client.sh

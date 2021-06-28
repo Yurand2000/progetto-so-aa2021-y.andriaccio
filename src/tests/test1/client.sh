@@ -1,6 +1,6 @@
 #!bin/bash
 
-SERVERPID = $!  #get the server PID, which is probably not the last one...
+SERVERPID = $!  #get the server PID ($! is the last background process PID)
 CLIENT = ./build/exec/client.o
 SOCKFILE = ./build/exec/socket.sk
 
