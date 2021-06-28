@@ -525,7 +525,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK)
 		{
 			int insert = 0;
-			for (int j = *out_curr_reqs; j >= 0 && insert == 0; j--)
+			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
 				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
 				if (  ( (*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
@@ -576,7 +576,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			{
 				if(strcmp(reqs[j].stringdata, req->stringdata) == 0) insert = 1;
 			}
-			for (int j = *out_curr_reqs; j >= 0 && insert == 0; j--)
+			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
 				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
 				if (  ( (*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
