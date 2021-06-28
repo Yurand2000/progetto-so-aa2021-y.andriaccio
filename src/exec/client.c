@@ -157,8 +157,8 @@ int main(int argc, char* argv[])
 
 	//connect
 	struct timespec abstime; abstime.tv_sec = 10; abstime.tv_nsec = 0;
-	long nsec = time_between_reqs * 1000000;
-	struct timespec waittime; waittime.tv_sec = nsec / 1000000000; waittime.tv_nsec = nsec % 1000000000;
+	long nsec = (long)time_between_reqs * 1000000L;
+	struct timespec waittime; waittime.tv_sec = nsec / 1000000000L; waittime.tv_nsec = nsec % 1000000000L;
 	res = openConnection(socket_name, time_between_reqs, abstime);
 	if(res == -1)
 	{
