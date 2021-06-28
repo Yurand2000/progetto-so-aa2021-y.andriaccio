@@ -527,7 +527,8 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			int insert = 0;
 			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
-				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
+				if ((*out_reqs)[j].type == REQUEST_REMOVE
+					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = 1;
 				if (  ( (*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
 						|| (*out_reqs)[j].type == REQUEST_CREATE_LOCK )
 					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0  ) insert = -1;
@@ -578,7 +579,8 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			}
 			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
-				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
+				if ((*out_reqs)[j].type == REQUEST_REMOVE
+					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = 1;
 				if (  ( (*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
 					|| (*out_reqs)[j].type == REQUEST_CREATE_LOCK )
 					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0  ) insert = -1;
