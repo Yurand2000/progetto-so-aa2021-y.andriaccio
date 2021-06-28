@@ -131,9 +131,7 @@ int main(int argc, char* argv[])
 	curr_reqs = 0;	//using the old reqs array, but as if it was empty.
 					//all old memory has already been cleared.
 
-	for (size_t i = 0; i < curr_reqs_exp; i++)
-		add_open_create_requests(&reqs_exp[i], &reqs, &curr_reqs, &reqs_size);
-
+	add_open_create_requests(reqs_exp, curr_reqs_exp, &reqs, &curr_reqs, &reqs_size);
 	free(reqs_exp);
 
 #ifdef _DEBUG
@@ -169,6 +167,9 @@ int main(int argc, char* argv[])
 	//pass requests
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
+		//wait
+		nanosleep(&waittime, NULL);
+
 		switch (reqs[i].type)
 		{
 		case REQUEST_OPEN:
@@ -236,10 +237,9 @@ int main(int argc, char* argv[])
 		default:
 			break;
 		}
-
-		//wait
-		nanosleep(&waittime, NULL);
 	}
+	//wait
+	nanosleep(&waittime, NULL);
 
 	closeConnection(socket_name);
 #endif
@@ -511,46 +511,121 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 	return 0;
 }
 
-static int add_open_create_requests(req_t* req, req_t** reqs,
-	size_t* curr_reqs, size_t* reqs_size)
+static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_reqs,
+	size_t* out_curr_reqs, size_t* out_reqs_size)
 {
 	req_t temp;
+	req_t *open_array = NULL, *close_array = NULL;
+	size_t curr_open = 0, curr_close = 0;
+	size_t open_size = 0, close_size = 0;
 	init_request(&temp);
 
-	if (req->type == REQUEST_READ || req->type == REQUEST_WRITE || req->type == REQUEST_REMOVE)
+	for (size_t i = 0; i < reqs_num; i++)
 	{
-		switch (req->type)
+		req_t* req = &reqs[i];
+		if (req->type == REQUEST_READ | req->type == REQUEST_LOCK | req->type == REQUEST_UNLOCK)
 		{
-		case REQUEST_READ:
-			temp.type = REQUEST_OPEN;
-			break;
-		case REQUEST_WRITE:
-			temp.type = REQUEST_CREATE_LOCK;
-			break;
-		case REQUEST_REMOVE:
-			temp.type = REQUEST_OPEN_LOCK;
-			break;
+			int cnt = 0;
+			for (size_t j = 0; j < curr_open && cnt == 0; j++)
+			{
+				if (strcmp(open_array[j].stringdata, req->stringdata) == 0)
+					cnt = 1;
+			}
+
+			if (cnt == 0)
+			{
+				temp.type = REQUEST_OPEN;
+				temp.stringdata_len = req->stringdata_len;
+				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+				ERRCHECK(add_request(temp, open_array, curr_open, open_size));
+			}
+		}
+		
+		if (req->type == REQUEST_READ | req->type == REQUEST_LOCK | req->type == REQUEST_UNLOCK
+			| req->type == REQUEST_WRITE)
+		{
+			int cnt = 0;
+			for (size_t j = 0; j < curr_close && cnt == 0; j++)
+			{
+				if (strcmp(close_array[j].stringdata, req->stringdata) == 0)
+					cnt = 1;
+			}
+
+			if (cnt == 0)
+			{
+				temp.type = REQUEST_CLOSE;
+				temp.stringdata_len = req->stringdata_len;
+				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+				ERRCHECK(add_request(temp, close_array, curr_close, close_size));
+			}
+		}
+	}
+
+	int opn, cls;
+	for (size_t i = 0; i < reqs_num; i++)
+	{
+		opn = -1; cls = -1;
+
+		//check if it has not been opened yet
+		for (size_t j = 0; j < curr_open && opn == -1; j++)
+		{
+			if (open_array[j].stringdata != NULL && strcmp(open_array[j].stringdata, reqs[i].stringdata) == 0)
+				opn = (int)j;
 		}
 
-		temp.stringdata_len = req->stringdata_len;
-		MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-		strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+		if (opn != -1)
+		{
+			ERRCHECK(add_request(open_array[opn], out_reqs, out_curr_reqs, out_reqs_size));
+			open_array[opn].stringdata = NULL;
+		}
 
-		ERRCHECK(add_request(temp, reqs, curr_reqs, reqs_size));
+		//specific requests for write and remove file
+		if (reqs[i].type == REQUEST_WRITE)
+		{
+			temp.type = REQUEST_CREATE_LOCK;
+			temp.stringdata_len = reqs[i].stringdata_len;
+			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+			strncpy(temp.stringdata, reqs[i].stringdata, temp.stringdata_len);
+
+			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+		}
+		else if (reqs[i].type == REQUEST_REMOVE)
+		{
+			temp.type = REQUEST_OPEN_LOCK;
+			temp.stringdata_len = reqs[i].stringdata_len;
+			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+			strncpy(temp.stringdata, reqs[i].stringdata, temp.stringdata_len);
+
+			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+		}
+
+		//push the actual request
+		ERRCHECK(add_request(reqs[i], out_reqs, out_curr_reqs, out_reqs_size));
+		reqs[i].stringdata = NULL;
+
+		//check if it has to be closed
+		int do_close;
+		for (size_t j = 0; j < curr_close && cls == -1; j++)
+		{
+			do_close = 1;
+			if (close_array[j].stringdata != NULL && reqs[i].stringdata != NULL
+				&& strcmp(close_array[j].stringdata, reqs[i].stringdata) == 0)
+				do_close = 0;
+
+			if(do_close)
+				cls = (int)j;
+		}
+
+		if (cls != -1)
+			ERRCHECK(add_request(close_array[cls], out_reqs, out_curr_reqs, out_reqs_size));
 	}
 
-	ERRCHECK(add_request(*req, reqs, curr_reqs, reqs_size));
-
-	if (req->type == REQUEST_READ || req->type == REQUEST_WRITE)
-	{
-		temp.type = REQUEST_CLOSE;
-		temp.stringdata_len = req->stringdata_len;
-		MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-		strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-
-		ERRCHECK(add_request(temp, reqs, curr_reqs, reqs_size));
-	}
-
+	free(open_array);
+	free(close_array);
 	return 0;
 }
 
