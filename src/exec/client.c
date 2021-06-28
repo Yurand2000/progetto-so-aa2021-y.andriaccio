@@ -571,6 +571,10 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			|| req->type == REQUEST_WRITE)
 		{
 			int insert = 0;
+			for (int j = i + 1; j < reqs_num; j++)
+			{
+				if(strcmp(reqs[j].stringdata, req->stringdata) == 0) insert = 1;
+			}
 			for (int j = *out_curr_reqs; j >= 0 && insert == 0; j--)
 			{
 				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
