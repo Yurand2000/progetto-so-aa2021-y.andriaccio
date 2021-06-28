@@ -32,8 +32,8 @@ static int split_and_fix_request_files(req_t* req, req_t** reqs,
 	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size);
 
 //add open/create and close request after each operation
-static int add_open_create_requests(req_t* req, req_t** reqs,
-	size_t* curr_reqs, size_t* reqs_size);
+static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_reqs,
+	size_t* out_curr_reqs, size_t* out_reqs_size);
 
 static void print_operation_result(const char* op_type, const char* file, int res);
 
@@ -523,7 +523,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 	for (size_t i = 0; i < reqs_num; i++)
 	{
 		req_t* req = &reqs[i];
-		if (req->type == REQUEST_READ | req->type == REQUEST_LOCK | req->type == REQUEST_UNLOCK)
+		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK)
 		{
 			int cnt = 0;
 			for (size_t j = 0; j < curr_open && cnt == 0; j++)
@@ -539,12 +539,12 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-				ERRCHECK(add_request(temp, open_array, curr_open, open_size));
+				ERRCHECK(add_request(temp, &open_array, &curr_open, &open_size));
 			}
 		}
 		
-		if (req->type == REQUEST_READ | req->type == REQUEST_LOCK | req->type == REQUEST_UNLOCK
-			| req->type == REQUEST_WRITE)
+		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK
+			|| req->type == REQUEST_WRITE)
 		{
 			int cnt = 0;
 			for (size_t j = 0; j < curr_close && cnt == 0; j++)
@@ -560,7 +560,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-				ERRCHECK(add_request(temp, close_array, curr_close, close_size));
+				ERRCHECK(add_request(temp, &close_array, &curr_close, &close_size));
 			}
 		}
 	}
