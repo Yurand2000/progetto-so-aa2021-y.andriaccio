@@ -515,72 +515,32 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 	size_t* out_curr_reqs, size_t* out_reqs_size)
 {
 	req_t temp;
-	req_t *open_array = NULL, *close_array = NULL;
-	size_t curr_open = 0, curr_close = 0;
-	size_t open_size = 0, close_size = 0;
 	init_request(&temp);
 
 	for (size_t i = 0; i < reqs_num; i++)
 	{
 		req_t* req = &reqs[i];
+
+		//insert the open request
 		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK)
 		{
-			int cnt = 0;
-			for (size_t j = 0; j < curr_open && cnt == 0; j++)
+			int insert = 0;
+			for (int j = *out_curr_reqs; j >= 0 && insert == 0; j--)
 			{
-				if (strcmp(open_array[j].stringdata, req->stringdata) == 0)
-					cnt = 1;
+				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
+				if ((*out_reqs)[j].type == REQUEST_OPEN &&
+					strncp((*out_reqs)[j].stringdata == req->stringdata) == 0) insert == -1;
 			}
 
-			if (cnt == 0)
+			if (insert != -1)
 			{
 				temp.type = REQUEST_OPEN;
 				temp.stringdata_len = req->stringdata_len;
 				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-				ERRCHECK(add_request(temp, &open_array, &curr_open, &open_size));
+				ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
 			}
-		}
-		
-		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK
-			|| req->type == REQUEST_WRITE)
-		{
-			int cnt = 0;
-			for (size_t j = 0; j < curr_close && cnt == 0; j++)
-			{
-				if (strcmp(close_array[j].stringdata, req->stringdata) == 0)
-					cnt = 1;
-			}
-
-			if (cnt == 0)
-			{
-				temp.type = REQUEST_CLOSE;
-				temp.stringdata_len = req->stringdata_len;
-				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-
-				ERRCHECK(add_request(temp, &close_array, &curr_close, &close_size));
-			}
-		}
-	}
-
-	int opn, cls;
-	for (size_t i = 0; i < reqs_num; i++)
-	{
-		opn = -1; cls = -1;
-
-		//check if it has not been opened yet
-		for (size_t j = 0; j < curr_open && opn == -1; j++)
-		{
-			if (open_array[j].stringdata != NULL && strcmp(open_array[j].stringdata, reqs[i].stringdata) == 0)
-				opn = (int)j;
-		}
-
-		if (opn != -1)
-		{
-			ERRCHECK(add_request(open_array[opn], out_reqs, out_curr_reqs, out_reqs_size));
-			open_array[opn].stringdata = NULL;
 		}
 
 		//specific requests for write and remove file
@@ -604,28 +564,31 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 		}
 
 		//push the actual request
-		ERRCHECK(add_request(reqs[i], out_reqs, out_curr_reqs, out_reqs_size));
-		reqs[i].stringdata = NULL;
-
-		//check if it has to be closed
-		int do_close;
-		for (size_t j = 0; j < curr_close && cls == -1; j++)
+		ERRCHECK(add_request(reqs[i], out_reqs, out_curr_reqs, out_reqs_size))
+		
+		//insert the close request
+		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK
+			|| req->type == REQUEST_WRITE)
 		{
-			do_close = 1;
-			if (close_array[j].stringdata != NULL && reqs[i].stringdata != NULL
-				&& strcmp(close_array[j].stringdata, reqs[i].stringdata) == 0)
-				do_close = 0;
+			int insert = 0;
+			for (int j = *out_curr_reqs; j >= 0 && insert == 0; j--)
+			{
+				if ((*out_reqs)[j].type == REQUEST_REMOVE) insert = 1;
+				if ((*out_reqs)[j].type == REQUEST_OPEN &&
+					strncp((*out_reqs)[j].stringdata == req->stringdata) == 0) insert == -1;
+			}
 
-			if(do_close)
-				cls = (int)j;
+			if (insert == -1)
+			{
+				temp.type = REQUEST_CLOSE;
+				temp.stringdata_len = req->stringdata_len;
+				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+				ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+			}
 		}
-
-		if (cls != -1)
-			ERRCHECK(add_request(close_array[cls], out_reqs, out_curr_reqs, out_reqs_size));
 	}
-
-	free(open_array);
-	free(close_array);
 	return 0;
 }
 
