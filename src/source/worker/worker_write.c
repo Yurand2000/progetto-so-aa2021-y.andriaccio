@@ -154,7 +154,7 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		void* buf = NULL; size_t buf_size = 0;
 		ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), &buf_size));
 		MALLOC(buf, sizeof(char) * buf_size);
-		ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * buf_size, &buf), { free(buf); });
+		ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * buf_size, buf), { free(buf); });
 
 		//cache miss
 		size_t curr_storage; size_t count = 0;

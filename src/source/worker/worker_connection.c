@@ -41,8 +41,6 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 	ERRCHECKDO(read_msg(*newconn, &in_msg), destroy_message(&in_msg));
 	create_message(&out_msg);
 
-	msg_t flags = GETFLAGS(in_msg.type);
-
 	if (is_client_message(&in_msg, MESSAGE_OPEN_CONN) == 0)
 	{
 		if (add_client(shared, *newconn) == -1)
