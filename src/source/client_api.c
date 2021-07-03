@@ -56,7 +56,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 
 	while(connect(conn, (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
 	{
-		if(errno == EAGAIN)
+		if(errno == ENOENT || errno == ECONNREFUSED)
 		{
 			//check if you are out of time
 			if(tot_time > abs_time)

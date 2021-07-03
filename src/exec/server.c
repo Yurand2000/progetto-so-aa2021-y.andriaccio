@@ -123,6 +123,7 @@ int main(int argc, char* argv[])
 
 	close(sigfd);
 	close(sck);
+	unlink(config_data.socket_file);
 
 	destroy_log_file_struct(&log_file);
 	return 0;
