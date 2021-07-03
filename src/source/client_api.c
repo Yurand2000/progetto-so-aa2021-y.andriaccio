@@ -346,18 +346,18 @@ int lockFile(const char* pathname)
 		if(check == 0)
 		{
 			if (HASFLAG(flags, MESSAGE_OP_SUCC))
-			{
-				struct timespec wait;
-				wait.tv_nsec = WAIT_TIMER;
-				ERRCHECK(nanosleep(&wait, NULL));
 				exit = 1;
-			}
 			else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
 				{ ERRSET(ENOENT, -1); }
 			else if(!HASFLAG(flags, MESSAGE_FILE_NOWN))
 				{ ERRSET(EBADMSG, -1); }
 		}
 		else { ERRSET(EBADMSG, -1); }
+
+		struct timespec wait;
+		wait.tv_sec = 0;
+		wait.tv_nsec = WAIT_TIMER;
+		ERRCHECK(nanosleep(&wait, NULL));
 	}
 #undef WAIT_TIMER
 	destroy_message(&msg);
