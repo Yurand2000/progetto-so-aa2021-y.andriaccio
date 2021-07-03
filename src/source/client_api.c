@@ -33,7 +33,6 @@ static void clear_byte_read_write();
 int openConnection(const char* sockname, int msec, const struct timespec abstime)
 {
 	clear_byte_read_write();
-	if (msec >= 1000) ERRSET(EINVAL, -1);
 	if (conn >= 0) ERRSET(EISCONN, -1);
 
 	size_t len; SOCKNAME_VALID(sockname, &len);
@@ -46,10 +45,12 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 	strncpy(addr.sun_path, sockname, len + 1);
 
 	//timespec struct to wait
-	struct timespec wait_timer;
+	struct timespec wait_timer, rem_timer;
+	long nsec = (long)msec * 1000000L;
+	wait_timer.tv_sec = nsec / 1000000000L;
+	wait_timer.tv_nsec = nsec % 1000000000L;
+
 	long tot_time, abs_time;
-	wait_timer.tv_sec = 0;
-	wait_timer.tv_nsec = (long)msec * 1000000L;
 	tot_time = 0;
 	abs_time = (long)abstime.tv_sec * 1000000000L + abstime.tv_nsec;
 
@@ -62,8 +63,8 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 				ERRSETDO(ETIMEDOUT, CLOSE, -1);
 
 			//retry wait time
-			ERRCHECKDO(nanosleep(&wait_timer, NULL), { CLOSE; return -1; });
-			tot_time += wait_timer.tv_nsec;
+			ERRCHECKDO(nanosleep(&wait_timer, &rem_timer), { CLOSE; return -1; });
+			tot_time += ((long)(wait_timer.tv_sec - rem_timer.tv_nsec) * 1000000000L) + (wait_timer.tv_nsec - rem_timer.tv_nsec);
 		}
 		else
 		{
@@ -78,7 +79,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_OPEN_CONN);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int check = is_server_message(&msg, MESSAGE_OCONN_ACK);
 	destroy_message(&msg);
@@ -102,7 +103,7 @@ int closeConnection(const char* sockname)
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_CLOSE_CONN);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 	destroy_message(&msg);
 	//we wait for the server answer just to be sure it has received our message.
 
@@ -125,7 +126,7 @@ int openFile(const char* pathname, int flags)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int check = is_server_message(&msg, MESSAGE_OFILE_ACK);
 	destroy_message(&msg);
@@ -158,7 +159,7 @@ int readFile(const char* pathname, void** buf, size_t* size)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	if(is_server_message(&msg, MESSAGE_RFILE_ACK) == 0)
 	{ 
@@ -194,7 +195,7 @@ int readNFiles(int n, const char* dirname)
 	push_buf(&msg.data, sizeof(int), &n);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	if (is_server_message(&msg, MESSAGE_RNFILE_ACK) == 0)
 	{
@@ -245,7 +246,7 @@ int writeFile(const char* pathname, const char* dirname)
 	close(file);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int cachemiss = 0;
 	if(is_server_message(&msg, MESSAGE_WFILE_ACK) == 0)
@@ -292,7 +293,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int cachemiss = 0;
 	if(is_server_message(&msg, MESSAGE_AFILE_ACK) == 0)
@@ -325,7 +326,7 @@ int lockFile(const char* pathname)
 	SOCK_VALID(conn);
 	size_t len; FILENAME_VALID(pathname, &len); len++;
 
-	net_msg msg;
+	net_msg msg, srv;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_LOCK_FILE);
 	push_buf(&msg.data, len, pathname);
 	push_buf(&msg.data, sizeof(size_t), &len);
@@ -335,13 +336,15 @@ int lockFile(const char* pathname)
 	int exit = 0;
 	while (!exit) //loop until the lock is acquired
 	{
-		SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+		SEND_TO_SOCKET(conn, &msg, CLOSE);
 
-		int check = is_server_message(&msg, MESSAGE_LFILE_ACK);
-		destroy_message(&msg);
+		create_message(&srv);
+		READ_FROM_SOCKET(conn, &srv, CLOSE);
+		int check = is_server_message(&srv, MESSAGE_LFILE_ACK);
+		msg_t flags = GETFLAGS(srv.type);
+		destroy_message(&srv);
 		if(check == 0)
 		{
-			msg_t flags = GETFLAGS(msg.type);
 			if (HASFLAG(flags, MESSAGE_OP_SUCC))
 			{
 				struct timespec wait;
@@ -357,6 +360,7 @@ int lockFile(const char* pathname)
 		else { ERRSET(EBADMSG, -1); }
 	}
 #undef WAIT_TIMER
+	destroy_message(&msg);
 	return 0;
 }
 
@@ -372,7 +376,7 @@ int unlockFile(const char* pathname)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int check = is_server_message(&msg, MESSAGE_ULFILE_ACK);
 	destroy_message(&msg);
@@ -403,7 +407,7 @@ int closeFile(const char* pathname)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int check = is_server_message(&msg, MESSAGE_CFILE_ACK);
 	destroy_message(&msg);
@@ -434,7 +438,7 @@ int removeFile(const char* pathname)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
 	int check = is_server_message(&msg, MESSAGE_RMFILE_ACK);
 	destroy_message(&msg);

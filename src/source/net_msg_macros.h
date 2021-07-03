@@ -15,22 +15,22 @@
  * calls return -1 in case of error and sets errno. */
 #define SEND_TO_SOCKET(sock, m_ptr, func) {\
 	ERRCHECKDO(write_msg(sock, m_ptr), { destroy_message(m_ptr); func; });\
-	destroy_message(m_ptr);\
 }
 
 /* reads to the message given by m_ptr from the socket. initializes the structure by itself.
  * calls return -1 in case of error, deletes the message and sets errno. */
 #define READ_FROM_SOCKET(sock, m_ptr, func) {\
-	create_message(m_ptr);\
 	ERRCHECKDO(read_msg(sock, m_ptr), { destroy_message(m_ptr); func; });\
 }
 
-/* sends the message given by m_out_ptr to the socket and reads (blocking)
+/* sends the message given by m_ptr to the socket and reads (blocking)
  * a response message from the server. There are error checks which make the function
  * return -1 setting errno. It should clean the memory properly. */
-#define SEND_RECEIVE_TO_SOCKET(sock, m_out_ptr, m_in_ptr, func) {\
-	SEND_TO_SOCKET(sock, m_out_ptr, func);\
-	READ_FROM_SOCKET(sock, m_in_ptr,func);\
+#define SEND_RECEIVE_TO_SOCKET(sock, m_ptr, func) {\
+	SEND_TO_SOCKET(sock, m_ptr, func);\
+	destroy_message(m_ptr);\
+	create_message(m_ptr);\
+	READ_FROM_SOCKET(sock, m_ptr,func);\
 }
 
 int is_server_message(net_msg* message, msg_t message_num);
