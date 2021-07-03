@@ -45,7 +45,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 	strncpy(addr.sun_path, sockname, len + 1);
 
 	//timespec struct to wait
-	struct timespec wait_timer, rem_timer;
+	struct timespec wait_timer;
 	long nsec = (long)msec * 1000000L;
 	wait_timer.tv_sec = nsec / 1000000000L;
 	wait_timer.tv_nsec = nsec % 1000000000L;
@@ -63,8 +63,8 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 				ERRSETDO(ETIMEDOUT, CLOSE, -1);
 
 			//retry wait time
-			ERRCHECKDO(nanosleep(&wait_timer, &rem_timer), { CLOSE; return -1; });
-			tot_time += ((long)(wait_timer.tv_sec - rem_timer.tv_nsec) * 1000000000L) + (wait_timer.tv_nsec - rem_timer.tv_nsec);
+			ERRCHECKDO(nanosleep(&wait_timer, NULL), { CLOSE; return -1; });
+			tot_time += (long)(wait_timer.tv_sec) * 1000000000L + wait_timer.tv_nsec;
 		}
 		else
 		{
