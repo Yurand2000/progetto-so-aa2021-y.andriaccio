@@ -43,11 +43,15 @@ int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 
 			do_log(log, *conn, STRING_READ_FILE, name, "Success.");
 		}
-		else if (errno == EPERM)
+		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
-
 			do_log(log, *conn, STRING_READ_FILE, name, "Permission denied.");
+		}
+		else if (errno == EPERM)
+		{
+			out_msg->type |= MESSAGE_FILE_NOPEN;
+			do_log(log, *conn, STRING_READ_FILE, name, "File is closed.");
 		}
 		else
 		{
@@ -92,14 +96,7 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 				wasopen = 0;
 			}
 
-			if(read_file(&files[i], *conn, &buf, &buf_size, &read_size) == -1)
-			{
-				do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
-				free(buf);
-				return -1;
-			}
-			ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
-			ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+			int res = read_file(&files[i], *conn, &buf, &buf_size, &read_size);
 
 			if (wasopen == 0)
 			{
@@ -110,16 +107,28 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 			}
 
-			if(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size) == -1)
+			if (res == 0)
+			{
+				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
+				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+
+				if (get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size) == -1)
+				{
+					do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
+					free(buf);
+					return -1;
+				}
+				ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
+				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
+				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+				count++;
+			}
+			else if(errno != EAGAIN && errno != EPERM)
 			{
 				do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
 				free(buf);
 				return -1;
 			}
-			ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
-			ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
-			ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
-			count++;			
 		}
 		i++;
 	}

@@ -41,8 +41,13 @@ int do_lock_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		}
 		else if (errno == EPERM)
 		{
-			out_msg->type |= MESSAGE_FILE_NOWN;
+			out_msg->type |= MESSAGE_FILE_NOPEN;
 
+			do_log(log, *conn, STRING_LOCK_FILE, name, "File is closed.");
+		}
+		else if (errno == EAGAIN)
+		{
+			out_msg->type |= MESSAGE_FILE_NOWN;
 			do_log(log, *conn, STRING_LOCK_FILE, name, "Permission denied.");
 		}
 		else
@@ -86,8 +91,12 @@ int do_unlock_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		}
 		else if (errno == EPERM)
 		{
+			out_msg->type |= MESSAGE_FILE_NOPEN;
+			do_log(log, *conn, STRING_UNLOCK_FILE, name, "File is closed.");
+		}
+		else if (errno == EAGAIN)
+		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
-
 			do_log(log, *conn, STRING_UNLOCK_FILE, name, "Permission denied.");
 		}
 		else

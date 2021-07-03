@@ -43,10 +43,9 @@ int do_close_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 
 			do_log(log, *conn, STRING_CLOSE_FILE, name, "Success.");
 		}
-		else if (errno == EPERM)
+		else if (errno == EAGAIN)
 		{
-			out_msg->type |= MESSAGE_FILE_LOCK;
-
+			out_msg->type |= MESSAGE_FILE_NOWN;
 			do_log(log, *conn, STRING_CLOSE_FILE, name, "Permission denied.");
 		}
 		else

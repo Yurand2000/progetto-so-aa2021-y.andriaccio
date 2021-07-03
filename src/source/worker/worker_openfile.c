@@ -65,7 +65,7 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 		if (nof == -1)
 		{
 			//max files in memory!
-			out_msg->type |= MESSAGE_FILE_EMFILE;
+			out_msg->type |= MESSAGE_FILE_ERRMAXFILES;
 
 			do_log(log, *conn, STRING_OPEN_FILE, name, "Too many open files.");
 		}
@@ -133,9 +133,9 @@ static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, ne
 
 			do_log(log, *conn, STRING_OPEN_FILE, name, "Success.");
 		}
-		else if (errno == EPERM)
+		else if (errno == EAGAIN)
 		{
-			out_msg->type |= MESSAGE_FILE_NPERM;
+			out_msg->type |= MESSAGE_FILE_NOWN;
 
 			do_log(log, *conn, STRING_OPEN_FILE, name, "Permission denied.");
 		}

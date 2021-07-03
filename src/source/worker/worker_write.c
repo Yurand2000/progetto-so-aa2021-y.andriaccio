@@ -90,13 +90,18 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 
 				if (errno == EPERM)
 				{
-					out_msg->type |= MESSAGE_FILE_NPERM;
-					do_log(log, *conn, STRING_WRITE_FILE, name, "Permission denied.");
+					out_msg->type |= MESSAGE_FILE_NOPEN;
+					do_log(log, *conn, STRING_WRITE_FILE, name, "File is closed.");
 				}
 				else if(errno == EEXIST)
 				{
-					out_msg->type |= MESSAGE_FILE_NPERM;
+					out_msg->type |= MESSAGE_FILE_EXISTS;
 					do_log(log, *conn, STRING_WRITE_FILE, name, "File was not empty.");
+				}
+				else if (errno == EAGAIN)
+				{
+					out_msg->type |= MESSAGE_FILE_NLOCK;
+					do_log(log, *conn, STRING_WRITE_FILE, name, "Permission denied.");
 				}
 				else
 				{
@@ -189,13 +194,18 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 
 			if (errno == EPERM)
 			{
-				out_msg->type |= MESSAGE_FILE_NPERM;
-				do_log(log, *conn, STRING_APPEND_FILE, name, "Permission denied.");
+				out_msg->type |= MESSAGE_FILE_NOPEN;
+				do_log(log, *conn, STRING_APPEND_FILE, name, "File is closed.");
 			}
-			else if (errno == EEXIST)
+			else if (errno == ENOENT)
 			{
-				out_msg->type |= MESSAGE_FILE_NPERM;
-				do_log(log, *conn, STRING_APPEND_FILE, name, "File was not empty.");
+				out_msg->type |= MESSAGE_FILE_NEXISTS;
+				do_log(log, *conn, STRING_APPEND_FILE, name, "File was empty.");
+			}
+			else if (errno == EAGAIN)
+			{
+				out_msg->type |= MESSAGE_FILE_NLOCK;
+				do_log(log, *conn, STRING_APPEND_FILE, name, "Permission denied.");
 			}
 			else
 			{

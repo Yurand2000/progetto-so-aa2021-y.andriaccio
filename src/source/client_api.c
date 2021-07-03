@@ -135,12 +135,14 @@ int openFile(const char* pathname, int flags)
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_OP_SUCC))
 			return 0;
-		else if(HASFLAG(flags, MESSAGE_FILE_NPERM))
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
 			{ ERRSET(EPERM, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_EXISTS))
 			{ ERRSET(EEXIST, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
 			{ ERRSET(ENOENT, -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_ERRMAXFILES))
+			{ ERRSET(ENFILE, -1); }
 		else
 			{ ERRSET(EBADMSG, -1); }
 	}
@@ -173,7 +175,7 @@ int readFile(const char* pathname, void** buf, size_t* size)
 			byte_read += *size;
 			destroy_message(&msg);
 		}
-		else if(HASFLAG(flags, MESSAGE_FILE_NPERM))
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 			{ ERRSET(EPERM, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
 			{ ERRSET(ENOENT, -1); }
@@ -264,9 +266,11 @@ int writeFile(const char* pathname, const char* dirname)
 			destroy_message(&msg);
 			return 0;
 		}
-		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+		else if(HASFLAG(flags, MESSAGE_FILE_NLOCK))
 			{ ERRSETDO(EPERM, destroy_message(&msg), -1); }
-		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+		else if(HASFLAG(flags, MESSAGE_FILE_EXISTS))
+			{ ERRSETDO(EEXIST, destroy_message(&msg), -1); }
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 			{ ERRSETDO(ENOENT, destroy_message(&msg), -1); }
 		else
 			{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
@@ -310,9 +314,9 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 			destroy_message(&msg);
 			return 0;
 		}
-		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
+		else if(HASFLAG(flags, MESSAGE_FILE_NLOCK))
 			{ ERRSETDO(EPERM, destroy_message(&msg), -1); }
-		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 			{ ERRSETDO(ENOENT, destroy_message(&msg), -1); }
 		else
 			{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
@@ -347,17 +351,19 @@ int lockFile(const char* pathname)
 		{
 			if (HASFLAG(flags, MESSAGE_OP_SUCC))
 				exit = 1;
-			else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+			else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 				{ ERRSET(ENOENT, -1); }
-			else if(!HASFLAG(flags, MESSAGE_FILE_NOWN))
+			else if (HASFLAG(flags, MESSAGE_FILE_NOWN))
+			{
+				struct timespec wait;
+				wait.tv_sec = 0;
+				wait.tv_nsec = WAIT_TIMER;
+				ERRCHECK(nanosleep(&wait, NULL));
+			}
+			else
 				{ ERRSET(EBADMSG, -1); }
 		}
 		else { ERRSET(EBADMSG, -1); }
-
-		struct timespec wait;
-		wait.tv_sec = 0;
-		wait.tv_nsec = WAIT_TIMER;
-		ERRCHECK(nanosleep(&wait, NULL));
 	}
 #undef WAIT_TIMER
 	destroy_message(&msg);
@@ -387,7 +393,7 @@ int unlockFile(const char* pathname)
 			return 0;
 		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
 			{ ERRSET(EPERM, -1); }
-		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 			{ ERRSET(ENOENT, -1); }
 		else
 			{ ERRSET(EBADMSG, -1); }
@@ -416,7 +422,7 @@ int closeFile(const char* pathname)
 		msg_t flags = GETFLAGS(msg.type);
 		if(HASFLAG(flags, MESSAGE_OP_SUCC))
 			return 0;
-		else if(HASFLAG(flags, MESSAGE_FILE_LOCK))
+		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
 			{ ERRSET(EPERM, -1); }
 		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
 			{ ERRSET(ENOENT, -1); }
@@ -449,7 +455,7 @@ int removeFile(const char* pathname)
 			return 0;
 		else if(HASFLAG(flags, MESSAGE_FILE_NOWN) || HASFLAG(flags, MESSAGE_FILE_NLOCK))
 			{ ERRSET(EPERM, -1); }
-		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS) || HASFLAG(flags, MESSAGE_FILE_NOPEN))
 			{ ERRSET(ENOENT, -1); }
 		else
 			{ ERRSET(EBADMSG, -1); }

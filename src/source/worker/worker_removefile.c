@@ -50,6 +50,12 @@ int do_remove_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			}
 			else if (errno == EPERM)
 			{
+				out_msg->type |= MESSAGE_FILE_NOPEN;
+
+				do_log(log, *conn, STRING_REMOVE_FILE, name, "File is closed.");
+			}
+			else if (errno == EAGAIN)
+			{
 				out_msg->type |= MESSAGE_FILE_NOWN;
 
 				do_log(log, *conn, STRING_REMOVE_FILE, name, "Permission denied.");
