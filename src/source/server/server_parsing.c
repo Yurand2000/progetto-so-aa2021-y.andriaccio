@@ -54,7 +54,7 @@ int command_line_parsing(int argc, char* argv[], cfg_t* config_data)
 	}
 
 	init_default_config(config_data);
-	parse_config_from_file(config_data, cfg);
+	ERRCHECK(parse_config_from_file(config_data, cfg));
 	return 0;
 }
 
@@ -70,10 +70,10 @@ void init_default_config(cfg_t* cfg)
 	cfg->algorithm = ALGO_FIFO;
 }
 
-void parse_config_from_file(cfg_t* cfg, char const* filename)
+int parse_config_from_file(cfg_t* cfg, char const* filename)
 {
 	cfg_file_t read_cfg;
-	ERRCHECK(read_config_file(filename, &read_cfg) == -1));
+	ERRCHECK(read_config_file(filename, &read_cfg));
 
 	//current valid options in config file:
 	//socket_name, log_name, worker_threads, storage_size, max_files, max_connections, algorithm
@@ -123,6 +123,7 @@ void parse_config_from_file(cfg_t* cfg, char const* filename)
 	}
 
 	free_config_file(&read_cfg);
+	return 0;
 }
 
 int print_stats(shared_state* state, file_t* files, size_t file_num)
