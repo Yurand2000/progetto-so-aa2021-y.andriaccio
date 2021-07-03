@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <time.h>
 
-#define _DEBUG
+//#define _DEBUG
 #define CLIENT_API_ENABLE
 
 #include "../source/client_api.h"
@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
 	}
 
 	//pass requests
+	char timestamp[23];
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
 		//wait
@@ -222,6 +223,19 @@ int main(int argc, char* argv[])
 			res = writeFile(reqs[i].stringdata, reqs[i].dir);
 			DO_PRINT("Write File", reqs[i].stringdata, res);
 			break;
+		case REQUEST_APPEND:
+			{
+				time_t currtime; struct tm time_print;
+				time(&currtime);
+				localtime_r(&currtime, &time_print);
+
+				snprintf(timestamp, sizeof(timestamp), "[%04d/%02d/%02d-%02d:%02d:%02d]\n",
+					(time_print.tm_year + 1900), (time_print.tm_mon + 1), time_print.tm_mday,
+					time_print.tm_hour, time_print.tm_min, time_print.tm_sec);
+			}
+			res = appendToFile(reqs[i].stringdata, timestamp, sizeof(timestamp), reqs[i].dir);
+			DO_PRINT("Append to File", reqs[i].stringdata, res);
+			break;
 		case REQUEST_LOCK:
 			res = lockFile(reqs[i].stringdata);
 			DO_PRINT("Lock File", reqs[i].stringdata, res);
@@ -256,7 +270,7 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs)
 {
 	int option, prec;
-	while((option = getopt(argc, argv, "-:hf:w:W:D:r:R::d:t:l:u:c:p")) != -1)
+	while((option = getopt(argc, argv, "-:hf:w:W:a:D:r:R::d:t:l:u:c:p")) != -1)
 	{
 		switch(option)
 		{
@@ -298,8 +312,11 @@ static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		case 'W':
 			ERRCHECK(cmd_to_request(REQUEST_WRITE, reqs, curr_reqs, reqs_size));
 			break;
+		case 'a':
+			ERRCHECK(cmd_to_request(REQUEST_APPEND, reqs, curr_reqs, reqs_size));
+			break;
 		case 'D':
-			if (prec != 'w' && prec != 'W')
+			if (prec != 'w' && prec != 'W' && prec != 'a')
 			{
 				printf("-D flag requires a preceding -w or -W flag. "
 					"Start with -h for details.\n");
@@ -370,9 +387,10 @@ static void print_help()
 "-W file1[,file2]      - Send the given file[s] to the file server.\n"\
 "-w dirname[,n=0]      - Send at most n (if n == 0 then all) files from the\n"\
 "                        directory \"dirname\" to the server\n"\
-"[-D dirname]          - This option goes only with -w or -W. Specifies a folder\n"\
-"                        to write cachemiss files expelled from the server.\n"\
-"                        It is optional.\n"\
+"-a file1[,file2]      - Append a time stamp to the given file[s]."\
+"[-D dirname]          - This option goes only with -w, -W or -a. Specifies a\n"\
+"                        folder to write cachemiss files expelled from the\n"\
+"                        server. It is optional.\n"\
 "---- Read file commands: ---------------------------------------\n"\
 "-r file1[,file2]      - Read the specified file[s] from the file server.\n"\
 "                        -d option optional for this command.\n"\

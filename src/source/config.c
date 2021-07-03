@@ -78,8 +78,8 @@ int read_config_file(const char* filename, cfg_file_t* out)
 	free(line);
 	ERRCHECKDO(realloc_cfg_struct(out, out->count), free_config_file(out));
 
-	if(feof(cfg) == 0) { return -1; }
-	else return 0;
+	fclose(cfg);
+	return 0;
 }
 
 const char* get_option(cfg_file_t const* cfg, const char* key)

@@ -73,8 +73,7 @@ void init_default_config(cfg_t* cfg)
 void parse_config_from_file(cfg_t* cfg, char const* filename)
 {
 	cfg_file_t read_cfg;
-	if (read_config_file(filename, &read_cfg) == -1)
-		free_config_file(&read_cfg);
+	ERRCHECK(read_config_file(filename, &read_cfg) == -1));
 
 	//current valid options in config file:
 	//socket_name, log_name, worker_threads, storage_size, max_files, max_connections, algorithm

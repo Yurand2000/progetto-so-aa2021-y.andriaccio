@@ -33,7 +33,8 @@ static void clear_byte_read_write();
 int openConnection(const char* sockname, int msec, const struct timespec abstime)
 {
 	clear_byte_read_write();
-	if(conn >= 0) ERRSET(EISCONN, -1);
+	if (msec >= 1000) ERRSET(EINVAL, -1);
+	if (conn >= 0) ERRSET(EISCONN, -1);
 
 	size_t len; SOCKNAME_VALID(sockname, &len);
 	conn = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -45,23 +46,24 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 	strncpy(addr.sun_path, sockname, len + 1);
 
 	//timespec struct to wait
-	struct timespec wait_timer, elp_time;
-	long tot_time;
+	struct timespec wait_timer;
+	long tot_time, abs_time;
 	wait_timer.tv_sec = 0;
-	wait_timer.tv_nsec = msec * 1000;
+	wait_timer.tv_nsec = (long)msec * 1000000L;
 	tot_time = 0;
+	abs_time = (long)abstime.tv_sec * 1000000000L + abstime.tv_nsec;
 
 	while(connect(conn, (struct sockaddr*)&addr, sizeof(struct sockaddr_un)) == -1)
 	{
 		if(errno == EAGAIN)
 		{
 			//check if you are out of time
-			if(tot_time > abstime.tv_sec * 1000000000 + abstime.tv_nsec)
+			if(tot_time > abs_time)
 				ERRSETDO(ETIMEDOUT, CLOSE, -1);
 
 			//retry wait time
-			ERRCHECKDO(nanosleep(&wait_timer, &elp_time), { CLOSE; return -1; });
-			tot_time += elp_time.tv_nsec;
+			ERRCHECKDO(nanosleep(&wait_timer, NULL), { CLOSE; return -1; });
+			tot_time += wait_timer.tv_nsec;
 		}
 		else
 		{
@@ -329,23 +331,33 @@ int lockFile(const char* pathname)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	set_checksum(&msg);
 
-	SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
-
-	int check = is_server_message(&msg, MESSAGE_LFILE_ACK);
-	destroy_message(&msg);
-	if(check == 0)
+#define WAIT_TIMER 200L * 1000000L //200 milliseconds
+	int exit = 0;
+	while (!exit) //loop until the lock is acquired
 	{
-		msg_t flags = GETFLAGS(msg.type);
-		if(HASFLAG(flags, MESSAGE_OP_SUCC))
-			return 0;
-		else if(HASFLAG(flags, MESSAGE_FILE_NOWN))
-			{ ERRSET(EPERM, -1); }
-		else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
-			{ ERRSET(ENOENT, -1); }
-		else
-			{ ERRSET(EBADMSG, -1); }
+		SEND_RECEIVE_TO_SOCKET(conn, &msg, &msg, CLOSE);
+
+		int check = is_server_message(&msg, MESSAGE_LFILE_ACK);
+		destroy_message(&msg);
+		if(check == 0)
+		{
+			msg_t flags = GETFLAGS(msg.type);
+			if (HASFLAG(flags, MESSAGE_OP_SUCC))
+			{
+				struct timespec wait;
+				wait.tv_nsec = WAIT_TIMER;
+				ERRCHECK(nanosleep(&wait, NULL));
+				exit = 1;
+			}
+			else if(HASFLAG(flags, MESSAGE_FILE_NEXISTS))
+				{ ERRSET(ENOENT, -1); }
+			else if(!HASFLAG(flags, MESSAGE_FILE_NOWN))
+				{ ERRSET(EBADMSG, -1); }
+		}
+		else { ERRSET(EBADMSG, -1); }
 	}
-	else { ERRSET(EBADMSG, -1); }
+#undef WAIT_TIMER
+	return 0;
 }
 
 int unlockFile(const char* pathname)

@@ -1,2 +1,0 @@
-cfg00 = assdad
- sadada asad #invalid line

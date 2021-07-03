@@ -1,7 +1,0 @@
-#configuration file example
-config1 = aaaa
-config2 = bbbb
-config3 = cccc #possible values: aaa bbb cccc
-	  
-config4 = newline
-config5 = hellno

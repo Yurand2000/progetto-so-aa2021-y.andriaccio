@@ -2,7 +2,7 @@ CC	=	gcc
 CFLAGS	= -Wall
 CFLAGS_END = -lpthread
 CRELFLAGS =	-O3
-CDEBFLAGS =	-g -fprofile-arcs -ftest-coverage -I ./src/source
+CDEBFLAGS =	-g -I ./src/source # -fprofile-arcs -ftest-coverage #(gcov options)
 
 SRCFLD 	= ./src
 SOURCE	= $(SRCFLD)/source
@@ -29,45 +29,53 @@ OUT_TEST = $(patsubst %.o, %.out, $(OBJ_TEST))
 SRC_EXEC = $(call rwildcard, $(SEXEC), *.c)
 OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
-.PHONY: all help debug clean clear cleanobj cleangcov
-.PHONY: server server_debug client client_debug
-.PHONY: utest utest_dirs test1 test2 test3
+.PHONY: all help debug clean clear cleanobj #cleangcov #(gcov options)
+.PHONY: server server_release server_debug client client_release client_debug
+.PHONY: test1 test2 test3
+#.PHONY: utest utest_dirs 
 
-help	:
+help :
 	@echo "available targets:"
-	@echo "all help debug clean/clear cleanobj cleangcov"
-	@echo "server server_debug client client_debug"
-	@echo "utest utest_run"
+	@echo "help all debug clean/clear cleanobj"
+	@echo "server server_release server_debug"
+	@echo "client client_release client_debug"
+	@echo "test1 test2 test3"
 
-TARGET = server client
+TARGET = server_release client_release
 TARGET_DEBUG = server_debug client_debug
 
 all	: $(TARGET)
 
-debug	: $(TARGET_DEBUG)
+debug : $(TARGET_DEBUG)
 
-server	: $(BLDEXE)/server.o $(OBJ_FILE)
-	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out $(CFLAGS_END)
+server : $(BLDEXE)/server.out
+$(BLDEXE)/server.out : $(BLDEXE)/server.o $(OBJ_FILE)
+	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 server_debug : CFLAGS += $(CDEBFLAGS)
 server_debug : server
+server_release : CFLAGS += $(CRELFLAGS)
+server_release : server
 
-client	: $(BLDEXE)/client.o $(OBJ_FILE)
-	$(CC) $(CFLAGS) $^ -o $(BLDEXE)/$@.out $(CFLAGS_END)
+client : $(BLDEXE)/client.out
+$(BLDEXE)/client.out : $(BLDEXE)/client.o $(OBJ_FILE)
+	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 client_debug : CFLAGS += $(CDEBFLAGS)
 client_debug : client
+client_release : CFLAGS += $(CRELFLAGS)
+client_release : client
 
-test1 : server client
-  @valgrind --leak-check=full $(BEXEC)/server.out -c ./tests/test1/test1.cfg &
-  @./tests/test1/client.sh
-  @fg
-test2 : server client
-  @$(BEXEC)/server.out -c ./tests/test2/test2.cfg &
-  @./tests/test2/client.sh
-  @fg
-#test3 : server client
-#  @$(BEXEC)/server.out -c ./tests/test3/test3.cfg &
-#  @./tests/test3/client.sh
-#  @fg
+test1 : all
+	@valgrind --leak-check=full $(BEXEC)/server.out -c $(TESTD)/test1/test1.cfg &
+	@$(TESTD)/test1/client.sh
+	@kill -s SIGHUP $!
+test2 : all
+	@$(BEXEC)/server.out -c $(TESTD)/test2/test2.cfg &
+	@$(TESTD)/test2/client.sh
+	@kill -s SIGHUP $!
+test3 : all
+	@$(BEXEC)/server.out -c $(TESTD)/test3/test3.cfg &
+	@$(TESTD)/test3/client.sh
+	@kill -s SIGINT $!
 
 #UNIT TESTS
 utest_dirs :
