@@ -156,11 +156,10 @@ int main(int argc, char* argv[])
 	//connect
 	struct timespec abstime; abstime.tv_sec = 5; abstime.tv_nsec = 0; long nsec;
 	if (time_between_reqs > 100)
-		nsec = (long)time_between_reqs * 1000000L;
+		res = openConnection(socket_name, time_between_reqs, abstime);
 	else
-		nsec = 500;
-	struct timespec waittime; waittime.tv_sec = nsec / 1000000000L; waittime.tv_nsec = nsec % 1000000000L;
-	res = openConnection(socket_name, time_between_reqs, abstime);
+		res = openConnection(socket_name, 500, abstime);
+
 	if(res == -1)
 	{
 		printf("couldn't connect to server!\n");
@@ -169,6 +168,8 @@ int main(int argc, char* argv[])
 
 	//pass requests
 	char timestamp[23];
+	nsec = (long)time_between_reqs * 1000000L;
+	struct timespec waittime; waittime.tv_sec = nsec / 1000000000L; waittime.tv_nsec = nsec % 1000000000L;
 	for (size_t i = 0; i < curr_reqs; i++)
 	{
 		//wait
