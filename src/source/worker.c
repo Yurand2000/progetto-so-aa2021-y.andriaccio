@@ -18,7 +18,7 @@
 #include "message_type.h"
 #include "net_msg_macros.h"
 
-#define THREAD_ERRCHECK(cond) if(cond == -1) return (void*)0;
+#define THREAD_ERRCHECK(cond) if(cond == -1) { perror("Thread failure"); return (void*)0 };
 
 int init_worker_data(worker_data* wd, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared)
