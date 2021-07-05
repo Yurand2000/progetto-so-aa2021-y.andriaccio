@@ -60,7 +60,7 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 int convert_slashes_to_underscores(char* name)
 {
 	int i = 0;
-	while (name[i] != '\0' || i < FILE_NAME_MAX_SIZE)
+	while (i < FILE_NAME_MAX_SIZE || name[i] != '\0')
 	{
 		if (name[i] == '/') name[i] = '_';
 		i++;

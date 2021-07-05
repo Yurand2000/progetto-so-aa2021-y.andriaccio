@@ -544,7 +544,8 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 		req_t* req = &reqs[i];
 
 		//insert the open request
-		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK)
+		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK ||
+			req->type == REQUEST_UNLOCK || req->type == REQUEST_APPEND)
 		{
 			int insert = 0;
 			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
@@ -592,7 +593,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 		
 		//insert the close request
 		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK
-			|| req->type == REQUEST_WRITE)
+			|| req->type == REQUEST_WRITE || req->type == REQUEST_APPEND)
 		{
 			int insert = 0;
 			for (int j = i + 1; j < reqs_num; j++)

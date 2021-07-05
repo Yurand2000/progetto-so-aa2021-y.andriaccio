@@ -219,8 +219,11 @@ int writeFile(const char* pathname, const char* dirname)
 {
 	clear_byte_read_write();
 	SOCK_VALID(conn);
-	size_t len; if(dirname != NULL) FILENAME_VALID(dirname, &len);
-	FILENAME_VALID(pathname, &len); len++;
+	size_t len;
+	
+	if(dirname != NULL)
+		FILENAME_VALID(dirname, &len);
+	FILENAME_VALID(pathname, &len);
 
 	//open file, check if it exists
 	int file; ERRCHECK((file = open(pathname, O_RDONLY)));
@@ -243,7 +246,6 @@ int writeFile(const char* pathname, const char* dirname)
 	push_buf(&msg.data, sizeof(size_t), &len);
 	byte_write += file_size;
 
-	//if last read was 0, then it should have succeded into creating the message
 	free(buf);
 	close(file);
 	set_checksum(&msg);

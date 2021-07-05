@@ -48,12 +48,12 @@ int is_client_message(net_msg* message, msg_t message_num);
 #define SOCK_VALID(sock) if(sock < 0) ERRSET(ENOTCONN, -1);
 
 #define SOCKNAME_VALID(sockname, len_ptr) {\
-	*(len_ptr) = strlen(sockname);\
+	*(len_ptr) = strlen(sockname) + 1;\
 	if(*(len_ptr) > UNIX_PATH_MAX) ERRSET(ENAMETOOLONG, -1);\
 }
 
 #define FILENAME_VALID(file, len_ptr) {\
-	*(len_ptr) = strlen(file);\
+	*(len_ptr) = strlen(file) + 1;\
 	if(*(len_ptr) > FILE_PATH_MAX) ERRSET(ENAMETOOLONG, -1);\
 }
 

@@ -40,7 +40,7 @@ int create_file_struct(file_t* file, char const* filename, int owner);
 
 int is_existing_file(file_t* file);
 
-/* returns 0 on name match, 1 on mismatch, -1 on error and sets errno. */
+/* returns 0 on success, -1 on error and sets errno. */
 int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* read_size);
 
 /* returns 0 on name match, 1 on mismatch, -1 on error and sets errno. */

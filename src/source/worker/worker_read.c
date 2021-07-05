@@ -105,12 +105,12 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
 
-				if (get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size) == -1)
-				{
-					do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
-					free(buf);
-					return -1;
-				}
+				ERRCHECKDO(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size),
+					{
+						do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
+						free(buf);
+						return -1;
+					});
 				ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
