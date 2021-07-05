@@ -663,8 +663,13 @@ static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* req
 	request.type = type;
 	if(type == REQUEST_READN)
 	{
-		if(optarg != NULL)
-			request.n = strtol(optarg, NULL, 0);
+		if (optarg != NULL)
+		{
+			char* saveptr = NULL;
+			char* token = strtok_r(optarg, "=", &saveptr);
+			token = strtok_r(NULL, " ", &saveptr);
+			request.n = strtol(token, NULL, 0);
+		}
 	}
 	else if (type == REQUEST_WRITE_DIR)
 	{
@@ -675,6 +680,8 @@ static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* req
 		strncpy(request.stringdata, token, request.stringdata_len);
 		
 		token = strtok_r(NULL, ",", &saveptr);
+		token = strtok_r(NULL, "=", &saveptr);
+		token = strtok_r(NULL, " ", &saveptr);
 		if(token != NULL) request.n = strtol(token, NULL, 0);
 	}
 	else
