@@ -18,6 +18,12 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
+static int do_cache_miss(file_t* files, size_t file_num, size_t buf_size,
+	shared_state* state, net_msg* out_msg);
+static int reserve_storage(size_t buf_size, shared_state* state);
+static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
+	size_t* buf_size, shared_state* state, log_t* log, char* log_op);
+
 int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
@@ -45,41 +51,15 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		}
 		else
 		{
-			//get file data
-			void* buf = NULL; size_t buf_size = 0;
-			ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), &buf_size));
-			MALLOC(buf, sizeof(char) * buf_size);
-			ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * buf_size, buf), { free(buf); });
+			void* buf = NULL; size_t buf_size = 0; int ret;
+			ERRCHECK( (ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)) );
+			if (ret == 1) { free(buf); return 0; }
 
-			//cache miss
-			size_t curr_storage; size_t count = 0;
-			ERRCHECK(pthread_mutex_lock(&state->state_mux));
-			curr_storage = state->current_storage;
-			ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-			while (curr_storage + buf_size >= state->ro_max_storage)
-			{
-				cache_miss(files, file_num, state, out_msg);
-
-				ERRCHECK(pthread_mutex_lock(&state->state_mux));
-				curr_storage = state->current_storage;
-				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-				count++;
-			}
-			if (count > 0)
-			{
-				out_msg->type |= MESSAGE_FILE_CHACEMISS;
-				push_buf(&out_msg->data, sizeof(size_t), &count);
-			}
-
-			//reserve storage
-			ERRCHECK(pthread_mutex_lock(&state->state_mux));
-			state->current_storage += buf_size;
-			if (state->current_storage >= state->max_reached_storage)
-				state->max_reached_storage = state->current_storage;
-			ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+			ERRCHECKDO(do_cache_miss(files, file_num, buf_size, state, out_msg), { free(buf); });
+			ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 			//write file
-			int ret = write_file(&files[file], *conn, buf, buf_size);
+			ret = write_file(&files[file], *conn, buf, buf_size);
 			free(buf);
 			if (ret == -1)
 			{
@@ -150,38 +130,12 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	}
 	else
 	{
-		//get file data
-		void* buf = NULL; size_t buf_size = 0;
-		ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), &buf_size));
-		MALLOC(buf, sizeof(char) * buf_size);
-		ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * buf_size, buf), { free(buf); });
+		void* buf = NULL; size_t buf_size = 0; int ret;
+		ERRCHECK((ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)));
+		if (ret == 1) { free(buf); return 0; }
 
-		//cache miss
-		size_t curr_storage; size_t count = 0;
-		ERRCHECKDO(pthread_mutex_lock(&state->state_mux), { free(buf); });
-		curr_storage = state->current_storage;
-		ERRCHECKDO(pthread_mutex_unlock(&state->state_mux), { free(buf); });
-		while (curr_storage + buf_size >= state->ro_max_storage)
-		{
-			cache_miss(files, file_num, state, out_msg);
-
-			ERRCHECKDO(pthread_mutex_lock(&state->state_mux), { free(buf); });
-			curr_storage = state->current_storage;
-			ERRCHECKDO(pthread_mutex_unlock(&state->state_mux), { free(buf); });
-			count++;
-		}
-		if (count > 0)
-		{
-			out_msg->type |= MESSAGE_FILE_CHACEMISS;
-			push_buf(&out_msg->data, sizeof(size_t), &count);
-		}
-
-		//reserve storage
-		ERRCHECKDO(pthread_mutex_lock(&state->state_mux), { free(buf); });
-		state->current_storage += buf_size;
-		if (state->current_storage >= state->max_reached_storage)
-			state->max_reached_storage = state->current_storage;
-		ERRCHECKDO(pthread_mutex_unlock(&state->state_mux), { free(buf); });
+		ERRCHECKDO(do_cache_miss(files, file_num, buf_size, state, out_msg), { free(buf); });
+		ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 		//append file
 		int ret = append_file(&files[file], *conn, buf, buf_size);
@@ -222,5 +176,59 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			do_log(log, *conn, STRING_APPEND_FILE, name, "Success.");
 		}
 	}
+	return 0;
+}
+
+static int do_cache_miss(file_t* files, size_t file_num, size_t buf_size,
+	shared_state* state, net_msg* out_msg)
+{
+	size_t curr_storage; size_t count = 0;
+	ERRCHECK(pthread_mutex_lock(&state->state_mux));
+	curr_storage = state->current_storage;
+	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+
+	while (curr_storage + buf_size >= state->ro_max_storage)
+	{
+		cache_miss(files, file_num, state, out_msg);
+
+		ERRCHECK(pthread_mutex_lock(&state->state_mux));
+		curr_storage = state->current_storage;
+		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+		count++;
+	}
+
+	if (count > 0)
+	{
+		out_msg->type |= MESSAGE_FILE_CHACEMISS;
+		push_buf(&out_msg->data, sizeof(size_t), &count);
+	}
+	return 0;
+}
+
+static int reserve_storage(size_t buf_size, shared_state* state)
+{
+	ERRCHECK(pthread_mutex_lock(&state->state_mux));
+	state->current_storage += buf_size;
+	if (state->current_storage >= state->max_reached_storage)
+		state->max_reached_storage = state->current_storage;
+	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+
+	return 0;
+}
+
+static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
+	size_t* buf_size, shared_state* state, log_t* log, char* log_op)
+{
+	ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), buf_size));
+
+	if (buf_size > state->ro_max_storage)
+	{
+		do_log(log, conn, log_op, name, "Data is too big.");
+		return 1;
+	}
+
+	MALLOC(*buf, sizeof(char) * *buf_size);
+	ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * *buf_size, *buf), { free(buf); });
+
 	return 0;
 }
