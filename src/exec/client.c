@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
 			{
 				//create file and write buf data
 				size_t dirlen = strlen(reqs[i].dir);
-				ERRCHECK(convert_slashes_to_underscores((char*)buf));
+				ERRCHECK( convert_slashes_to_underscores(reqs[i].stringdata) );
 				size_t len = strlen(reqs[i].stringdata) + 1;
 				char* file = malloc(len + dirlen);
 				if (file != NULL)
