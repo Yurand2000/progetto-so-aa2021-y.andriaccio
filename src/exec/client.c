@@ -679,7 +679,6 @@ static int cmd_to_request(int type, req_t** reqs, size_t* curr_reqs, size_t* req
 		MALLOC(request.stringdata, request.stringdata_len);
 		strncpy(request.stringdata, token, request.stringdata_len);
 		
-		token = strtok_r(NULL, ",", &saveptr);
 		token = strtok_r(NULL, "=", &saveptr);
 		token = strtok_r(NULL, " ", &saveptr);
 		if(token != NULL) request.n = strtol(token, NULL, 0);
