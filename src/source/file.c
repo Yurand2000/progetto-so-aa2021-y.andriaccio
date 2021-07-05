@@ -92,7 +92,7 @@ int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* 
 	if (file == NULL || out_data == NULL || out_data_size == NULL || read_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
 	size_t name_len = strlen(file->name) + 1;
-	if (*out_data_size <= name_len)
+	if (*out_data_size < name_len)
 	{
 		void* out;
 		REALLOCDO(out, *out_data, name_len, { UNLOCK(file); });
@@ -252,7 +252,7 @@ int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, siz
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
-	if(*out_data_size <= file->open_size)
+	if(*out_data_size < file->open_size)
 	{
 		void* out;
 		REALLOCDO(out, *out_data, file->open_size, { UNLOCK(file); });
