@@ -11,6 +11,7 @@
 #define CLIENT_API_ENABLE
 
 #include "../source/client_api.h"
+#include "../source/worker/worker_generics.h"
 
 static void print_help();
 
@@ -200,6 +201,7 @@ int main(int argc, char* argv[])
 			{
 				//create file and write buf data
 				size_t dirlen = strlen(reqs[i].dir);
+				ERRCHECK(convert_slashes_to_underscores((char*)buf));
 				size_t len = strlen(reqs[i].stringdata) + 1;
 				char* file = malloc(len + dirlen);
 				if (file != NULL)

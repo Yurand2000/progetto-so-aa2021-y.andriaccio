@@ -45,7 +45,16 @@ int read_file_name(net_msg* msg, char* buf_name, size_t buf_size)
 	else ERRSET(ENOBUFS, -1);
 }
 
-
+int convert_slashes_to_underscores(char* name)
+{
+	int i = 0;
+	while (i < FILE_NAME_MAX_SIZE || name[i] != '\0')
+	{
+		if (name[i] == '/') name[i] = '_';
+		i++;
+	}
+	return 0;
+}
 
 void do_log(log_t* log, int fileno, char* operation, char* file, char* error)
 {

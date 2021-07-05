@@ -57,17 +57,6 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 	return 0;
 }
 
-int convert_slashes_to_underscores(char* name)
-{
-	int i = 0;
-	while (i < FILE_NAME_MAX_SIZE || name[i] != '\0')
-	{
-		if (name[i] == '/') name[i] = '_';
-		i++;
-	}
-	return 0;
-}
-
 int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
