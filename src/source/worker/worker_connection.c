@@ -23,12 +23,12 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 	net_msg in_msg, out_msg;
 
 	ERRCHECK(pthread_mutex_lock(&shared->state_mux));
-	int curr_files = shared->current_files;
+	int curr_conns = shared->current_conns;
 	ERRCHECK(pthread_mutex_unlock(&shared->state_mux));
-	if (curr_files >= shared->ro_max_files)
+	if (curr_conns >= shared->ro_max_conns)
 	{
 		do_log(log, -1, STRING_OPEN_CONN, "none", "Max clients connected.");
-		ERRSET(ENFILE, -1);
+		return 0;
 	}
 
 	ERRCHECK(pthread_mutex_lock(&shared->state_mux));
