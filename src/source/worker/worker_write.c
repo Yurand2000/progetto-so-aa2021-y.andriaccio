@@ -138,7 +138,7 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 		//append file
-		int ret = append_file(&files[file], *conn, buf, buf_size);
+		ret = append_file(&files[file], *conn, buf, buf_size);
 		free(buf);
 		if (ret == -1)
 		{
@@ -221,14 +221,14 @@ static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
 {
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), buf_size));
 
-	if (buf_size > state->ro_max_storage)
+	if (*buf_size > state->ro_max_storage)
 	{
 		do_log(log, conn, log_op, name, "Data is too big.");
 		return 1;
 	}
 
 	MALLOC(*buf, sizeof(char) * *buf_size);
-	ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * *buf_size, *buf), { free(buf); });
+	ERRCHECKDO(pop_buf(&in_msg->data, sizeof(char) * *buf_size, *buf), { free(*buf); });
 
 	return 0;
 }
