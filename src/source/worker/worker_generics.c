@@ -48,7 +48,7 @@ int read_file_name(net_msg* msg, char* buf_name, size_t buf_size)
 int convert_slashes_to_underscores(char* name)
 {
 	int i = 0;
-	while (i < FILE_NAME_MAX_SIZE || name[i] != '\0')
+	while (i < FILE_NAME_MAX_SIZE && name[i] != '\0')
 	{
 		if (name[i] == '/') name[i] = '_';
 		i++;
