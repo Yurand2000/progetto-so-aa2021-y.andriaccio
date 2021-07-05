@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-static int do_cache_miss(file_t* files, size_t file_num, size_t buf_size,
+static int do_cache_miss(char* name, file_t* files, size_t file_num, size_t buf_size,
 	shared_state* state, net_msg* out_msg);
 static int reserve_storage(size_t buf_size, shared_state* state);
 static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
@@ -55,7 +55,7 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			ERRCHECK( (ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)) );
 			if (ret == 1) { free(buf); return 0; }
 
-			ERRCHECKDO(do_cache_miss(files, file_num, buf_size, state, out_msg), { free(buf); });
+			ERRCHECKDO(do_cache_miss(name, files, file_num, buf_size, state, out_msg), { free(buf); });
 			ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 			//write file
@@ -134,7 +134,7 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		ERRCHECK((ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)));
 		if (ret == 1) { free(buf); return 0; }
 
-		ERRCHECKDO(do_cache_miss(files, file_num, buf_size, state, out_msg), { free(buf); });
+		ERRCHECKDO(do_cache_miss(name, files, file_num, buf_size, state, out_msg), { free(buf); });
 		ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 		//append file
@@ -179,7 +179,7 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	return 0;
 }
 
-static int do_cache_miss(file_t* files, size_t file_num, size_t buf_size,
+static int do_cache_miss(char* name, file_t* files, size_t file_num, size_t buf_size,
 	shared_state* state, net_msg* out_msg)
 {
 	size_t curr_storage; size_t count = 0;
@@ -189,7 +189,7 @@ static int do_cache_miss(file_t* files, size_t file_num, size_t buf_size,
 
 	while (curr_storage + buf_size >= state->ro_max_storage)
 	{
-		cache_miss(files, file_num, state, out_msg);
+		cache_miss(name, files, file_num, state, out_msg);
 
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
 		curr_storage = state->current_storage;

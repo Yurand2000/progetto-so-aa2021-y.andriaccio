@@ -7,20 +7,35 @@
 #include "../net_msg.h"
 #include "../errset.h"
 
-int cache_miss(file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
+#define FILE_LOOP_DO(nodel_file, files, file_num, todo) \
+int res;\
+for (size_t i = 0; i < file_num; i++)\
+{\
+	ERRCHECK( (res = is_existing_file(&files[i])) );\
+	if (res == 0)\
+	{\
+		ERRCHECK( (res = check_file_name(&files[i], nodel_file)) );\
+		if (res != 0)\
+		{\
+			todo;\
+		}\
+	}\
+}\
+
+int cache_miss(char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
 {
 	void* buf = NULL; char* name = NULL; size_t buf_size = 0, name_size = 0;
 	//cache miss call here
 	switch (state->ro_cache_miss_algorithm)
 	{
 	case ALGO_LFU:
-		evict_LFU(files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_LFU(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 		break;
 	case ALGO_LRU:
-		evict_LRU(files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_LRU(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 		break;
 	case ALGO_FIFO:
-		evict_FIFO(files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_FIFO(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 	default:
 		break;
 	}
@@ -57,32 +72,28 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 	return 0;
 }
 
-int evict_FIFO(file_t* files, size_t file_num, shared_state* state,
+int evict_FIFO(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_older = 0;
 	time_t curr_older_time = time(NULL);
 	time_t temp;
-	for (size_t i = 0; i < file_num; i++)
+	
+	FILE_LOOP_DO(nodel_file, files, file_num, 
 	{
-		int res = is_existing_file(&files[i]);
-		ERRCHECK(res);
-		if (res == 0)
+		get_usage_data(&files[i], &temp, NULL, NULL);
+		if (temp < curr_older_time)
 		{
-			get_usage_data(&files[i], &temp, NULL, NULL);
-			if (temp < curr_older_time)
-			{
-				curr_older_time = temp;
-				curr_older = i;
-			}
+			curr_older_time = temp;
+			curr_older = i;
 		}
-	}
+	});
 
 	ERRCHECK(delete_evicted(curr_older, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
-int evict_LRU(file_t* files, size_t file_num, shared_state* state,
+int evict_LRU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
@@ -90,45 +101,36 @@ int evict_LRU(file_t* files, size_t file_num, shared_state* state,
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 	char temp = 1;
 
-	for (size_t i = 0; i < file_num && temp; i++)
+	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
-		int res = is_existing_file(&files[i]);
-		ERRCHECK(res);
-		if (res == 0)
+		get_usage_data(&files[clock_pos], NULL, NULL, &temp);
+		if (temp)
 		{
-			get_usage_data(&files[clock_pos], NULL, NULL, &temp);
-			if (temp)
-			{
-				update_lru(&files[clock_pos], 0);
-				clock_pos = (clock_pos + 1) % file_num;
-			}
+			update_lru(&files[clock_pos], 0);
+			clock_pos = (clock_pos + 1) % file_num;
 		}
-	}
+	});
 
 	ERRCHECK(delete_evicted(clock_pos, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
-int evict_LFU(file_t* files, size_t file_num, shared_state* state,
+int evict_LFU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_least_used = 0;
 	int curr_least_used_freq = INT_MAX;
 	int temp;
-	for (size_t i = 0; i < file_num; i++)
+	
+	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
-		int res = is_existing_file(&files[i]);
-		ERRCHECK(res);
-		if (res == 0)
+		get_usage_data(&files[i], NULL, &temp, NULL);
+		if (temp < curr_least_used_freq)
 		{
-			get_usage_data(&files[i], NULL, &temp, NULL);
-			if (temp < curr_least_used_freq)
-			{
-				curr_least_used_freq = temp;
-				curr_least_used = i;
-			}
+			curr_least_used_freq = temp;
+			curr_least_used = i;
 		}
-	}
+	});
 
 	ERRCHECK(delete_evicted(curr_least_used, files, state, buf, buf_size, name, name_size));
 	return 0;
