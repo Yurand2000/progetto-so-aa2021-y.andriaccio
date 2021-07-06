@@ -67,7 +67,7 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 			//max files in memory!
 			out_msg->type |= MESSAGE_FILE_ERRMAXFILES;
 
-			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Too many open files.", 0, 0);
+			do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "Too many open files.", 0, 0);
 		}
 		else
 		{
@@ -75,7 +75,7 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 			if (res == -1)
 			{
 				//file error!
-				do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
+				do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File error.", 0, 0);
 				return -1;
 			}
 			else
@@ -94,12 +94,15 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 					if (GETFLAGS(in_msg->type) & MESSAGE_OPEN_OLOCK)
 						strncpy(lastop_writefile_pname, name, FILE_NAME_MAX_SIZE);
 
-					do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Success.", 0, 0);
+					if(owner == OWNER_NULL)
+						do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "Success.", 0, 0);
+					else
+						do_log(log, thread_id, *conn, name, STRING_CREATELOCK_FILE, "Success.", 0, 0);
 				}
 				else
 				{
 					//file error!
-					do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
+					do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File error.", 0, 0);
 					return -1;
 				}
 			}
@@ -110,7 +113,7 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 		//file already exists;
 		out_msg->type |= MESSAGE_FILE_EXISTS;
 
-		do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File already exists.", 0, 0);
+		do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File already exists.", 0, 0);
 	}
 	return 0;
 }
@@ -129,7 +132,10 @@ static int _open_file_open(int thread_id, int fslot, char* name, int* conn, net_
 		{
 			out_msg->type |= MESSAGE_OP_SUCC;
 
-			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Success.", 0, 0);
+			if (owner == OWNER_NULL)
+				do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Success.", 0, 0);
+			else
+				do_log(log, thread_id, *conn, name, STRING_OPENLOCK_FILE, "Success.", 0, 0);
 		}
 		else if (errno == EAGAIN)
 		{

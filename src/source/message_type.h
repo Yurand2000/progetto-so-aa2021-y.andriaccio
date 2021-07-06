@@ -78,17 +78,20 @@ typedef uint32_t msg_t;
 #define MESSAGE_OPEN_OLOCK FLAG(2)
 
 //client request to string
-#define STRING_OPEN_CONN "Open_Connection"
-#define STRING_CLOSE_CONN "Close_Connection"
-#define STRING_OPEN_FILE "Open_File"
-#define STRING_CLOSE_FILE "Close_File"
-#define STRING_READ_FILE "Read_File"
-#define STRING_READN_FILE "Read_N_Files"
-#define STRING_WRITE_FILE "Write_File"
-#define STRING_APPEND_FILE "Append_To_File"
-#define STRING_LOCK_FILE "Lock_File"
-#define STRING_UNLOCK_FILE "Unlock_File"
-#define STRING_REMOVE_FILE "Remove_File"
+#define STRING_OPEN_CONN "Open Connection"
+#define STRING_CLOSE_CONN "Close Connection"
+#define STRING_OPEN_FILE "Open File"
+#define STRING_CREATE_FILE "Create File"
+#define STRING_OPENLOCK_FILE "OpenLock File"
+#define STRING_CREATELOCK_FILE "CreateLock File"
+#define STRING_CLOSE_FILE "Close File"
+#define STRING_READ_FILE "Read File"
+#define STRING_READN_FILE "Read N Files"
+#define STRING_WRITE_FILE "Write File"
+#define STRING_APPEND_FILE "Append To File"
+#define STRING_LOCK_FILE "Lock File"
+#define STRING_UNLOCK_FILE "Unlock File"
+#define STRING_REMOVE_FILE "Remove File"
 #define STRING_CACHE_MISS "CacheMiss"
 
 #endif
