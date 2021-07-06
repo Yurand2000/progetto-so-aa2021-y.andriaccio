@@ -471,7 +471,7 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 	char* buf = NULL; char* name = NULL;
 
 	ERRCHECKDO(pop_buf(&msg->data, sizeof(size_t), &count), { free(name); free(buf); });
-	printf("Debug ------- Count: %d\n", count);
+	printf("Debug ------- Count: %ld\n", count);
 	for (size_t i = 0; i < count; i++)
 	{
 		//get name
