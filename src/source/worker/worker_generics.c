@@ -60,9 +60,9 @@ void do_log(log_t* log, int thread, int client, char* file, char* operation,
 	char* outcome, int readsize, int writesize)
 {
 	char log_msg[MESSAGE_MAX_SIZE];
-	snprintf(log_msg, MESSAGE_MAX_SIZE, "Thread:%d\tFile:%s\tClient-Operation:[%d-%s]\t"
-		"Outcome:%s\tReadSize:%d\tWriteSize:%d",
-		thread, file, client, operation, outcome, readsize, writesize);
+	snprintf(log_msg, MESSAGE_MAX_SIZE, "Thread:%d\tRead:%d\tWrite:%d\tClient-Op:[%d-%s]\t"
+		"Outcome:%s\tFile:%s",
+		thread, readsize, writesize, client, operation, outcome, file);
 	print_line_to_log_file(log, log_msg);
 }
 
