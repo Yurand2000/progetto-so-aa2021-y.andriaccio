@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_read_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -41,21 +41,21 @@ int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			ERRCHECK(push_buf(&out_msg->data, sizeof(size_t), &read_size));
 			free(buf);
 
-			do_log(log, *conn, STRING_READ_FILE, name, "Success.");
+			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "Success.", (int)read_size, 0);
 		}
 		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
-			do_log(log, *conn, STRING_READ_FILE, name, "Permission denied.");
+			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "Permission denied.", 0, 0);
 		}
 		else if (errno == EPERM)
 		{
 			out_msg->type |= MESSAGE_FILE_NOPEN;
-			do_log(log, *conn, STRING_READ_FILE, name, "File is closed.");
+			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "File is closed.", 0, 0);
 		}
 		else
 		{
-			do_log(log, *conn, STRING_READ_FILE, name, "File error.");
+			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "File error.", 0, 0);
 			return -1;
 		}
 	}
@@ -63,17 +63,17 @@ int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	{
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-		do_log(log, *conn, STRING_READ_FILE, name, "File doesn't exist.");
+		do_log(log, thread_id, *conn, name, STRING_READ_FILE, "File doesn't exist.", 0, 0);
 	}
 	else
 	{
-		do_log(log, *conn, STRING_READ_FILE, name, "File error.");
+		do_log(log, thread_id, *conn, name, STRING_READ_FILE, "File error.", 0, 0);
 		return -1;
 	}
 	return 0;
 }
 
-int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -84,7 +84,7 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(int), &n));
 
 	size_t i = 0; long diff;
-	void* buf = NULL; size_t buf_size = 0, read_size;
+	void* buf = NULL; size_t buf_size = 0, read_size; int total_read = 0;
 	while (i < file_num && (n <= 0 || count < n))
 	{
 		if ((is_existing_file(&files[i]) == 0))
@@ -104,10 +104,11 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 			{
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+				total_read += read_size;
 
 				ERRCHECKDO(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size),
 					{
-						do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
+						do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
 						free(buf);
 						return -1;
 					});
@@ -118,7 +119,7 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 			}
 			else if(error != EAGAIN && error != EPERM)
 			{
-				do_log(log, *conn, STRING_READN_FILE, "none", "File error.");
+				do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
 				free(buf);
 				return -1;
 			}
@@ -130,6 +131,6 @@ int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
 	ERRCHECK(push_buf(&out_msg->data, sizeof(size_t), &count));
 	out_msg->type |= MESSAGE_OP_SUCC;
 
-	do_log(log, *conn, STRING_READN_FILE, "none", "Success.");
+	do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "Success.", total_read, 0);
 	return 0;
 }

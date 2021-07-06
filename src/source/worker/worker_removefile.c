@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-int do_remove_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -46,23 +46,23 @@ int do_remove_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 				state->current_storage -= size;
 				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 
-				do_log(log, *conn, STRING_REMOVE_FILE, name, "Success.");
+				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "Success.", 0, 0);
 			}
 			else if (errno == EPERM)
 			{
 				out_msg->type |= MESSAGE_FILE_NOPEN;
 
-				do_log(log, *conn, STRING_REMOVE_FILE, name, "File is closed.");
+				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File is closed.", 0, 0);
 			}
 			else if (errno == EAGAIN)
 			{
 				out_msg->type |= MESSAGE_FILE_NOWN;
 
-				do_log(log, *conn, STRING_REMOVE_FILE, name, "Permission denied.");
+				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "Permission denied.", 0, 0);
 			}
 			else
 			{
-				do_log(log, *conn, STRING_REMOVE_FILE, name, "File error.");
+				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File error.", 0, 0);
 				return -1;
 			}
 		}
@@ -71,11 +71,11 @@ int do_remove_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	{
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-		do_log(log, *conn, STRING_REMOVE_FILE, name, "File doesn't exist.");
+		do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File doesn't exist.", 0, 0);
 	}
 	else
 	{
-		do_log(log, *conn, STRING_REMOVE_FILE, name, "File error.");
+		do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File error.", 0, 0);
 		return -1;
 	}
 	return 0;

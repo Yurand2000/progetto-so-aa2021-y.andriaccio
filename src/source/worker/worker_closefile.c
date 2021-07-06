@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-int do_close_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_close_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -41,16 +41,16 @@ int do_close_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			state->current_storage -= diff;
 			ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 
-			do_log(log, *conn, STRING_CLOSE_FILE, name, "Success.");
+			do_log(log, thread_id, *conn, name, STRING_CLOSE_FILE, "Success.", 0, diff);
 		}
 		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
-			do_log(log, *conn, STRING_CLOSE_FILE, name, "Permission denied.");
+			do_log(log, thread_id, *conn, name, STRING_CLOSE_FILE, "Permission denied.", 0, 0);
 		}
 		else
 		{
-			do_log(log, *conn, STRING_CLOSE_FILE, name, "File error.");
+			do_log(log, thread_id, *conn, name, STRING_CLOSE_FILE, "File error.", 0, 0);
 			return -1;
 		}
 	}
@@ -58,11 +58,11 @@ int do_close_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	{
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-		do_log(log, *conn, STRING_CLOSE_FILE, name, "File does not exist.");
+		do_log(log, thread_id, *conn, name, STRING_CLOSE_FILE, "File does not exist.", 0, 0);
 	}
 	else
 	{
-		do_log(log, *conn, STRING_CLOSE_FILE, name, "File error.");
+		do_log(log, thread_id, *conn, name, STRING_CLOSE_FILE, "File error.", 0, 0);
 		return -1;
 	}
 	return 0;

@@ -18,13 +18,13 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-static int do_cache_miss(char* name, file_t* files, size_t file_num, size_t buf_size,
+static int do_cache_miss(log_t* log, int thread_id, char* name, file_t* files, size_t file_num, size_t buf_size,
 	shared_state* state, net_msg* out_msg);
 static int reserve_storage(size_t buf_size, shared_state* state);
-static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
+static int get_data(int thread_id, int conn, char* name, net_msg* in_msg, void** buf,
 	size_t* buf_size, shared_state* state, log_t* log, char* log_op);
 
-int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_write_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -40,22 +40,22 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		if (file == -1 && errno != ENOENT)
 		{
 			//file error!
-			do_log(log, *conn, STRING_WRITE_FILE, name, "File error.");
+			do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File error.", 0, 0);
 			return -1;
 		}
 		else if (file == -1)
 		{
 			out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-			do_log(log, *conn, STRING_WRITE_FILE, name, "File doesn't exist.");
+			do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File doesn't exist.", 0, 0);
 		}
 		else
 		{
 			void* buf = NULL; size_t buf_size = 0; int ret;
-			ERRCHECK( (ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)) );
+			ERRCHECK( (ret = get_data(thread_id, *conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)) );
 			if (ret == 1) { free(buf); return 0; }
 
-			ERRCHECKDO(do_cache_miss(name, files, file_num, buf_size, state, out_msg), { free(buf); });
+			ERRCHECKDO(do_cache_miss(log, thread_id, name, files, file_num, buf_size, state, out_msg), { free(buf); });
 			ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 			//write file
@@ -71,41 +71,41 @@ int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 				if (errno == EPERM)
 				{
 					out_msg->type |= MESSAGE_FILE_NOPEN;
-					do_log(log, *conn, STRING_WRITE_FILE, name, "File is closed.");
+					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File is closed.", 0, 0);
 				}
 				else if(errno == EEXIST)
 				{
 					out_msg->type |= MESSAGE_FILE_EXISTS;
-					do_log(log, *conn, STRING_WRITE_FILE, name, "File was not empty.");
+					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File was not empty.", 0, 0);
 				}
 				else if (errno == EAGAIN)
 				{
 					out_msg->type |= MESSAGE_FILE_NLOCK;
-					do_log(log, *conn, STRING_WRITE_FILE, name, "Permission denied.");
+					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "Permission denied.", 0, 0);
 				}
 				else
 				{
 					//file error!
-					do_log(log, *conn, STRING_WRITE_FILE, name, "File error.");
+					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File error.", 0, 0);
 					return -1;
 				}
 			}
 			else
 			{
 				out_msg->type |= MESSAGE_OP_SUCC;
-				do_log(log, *conn, STRING_WRITE_FILE, name, "Success.");
+				do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "Success.", 0, buf_size);
 			}
 		}
 	}
 	else
 	{
-		do_log(log, *conn, STRING_WRITE_FILE, name, "Client last operation was not a"
-			" successful open file request with O_CREATE and O_LOCK flags.");
+		do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "Client last operation was not a"
+			" successful open file request with O_CREATE and O_LOCK flags.", 0, 0);
 	}
 	return 0;
 }
 
-int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_append_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -119,22 +119,22 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	if (file == -1 && errno != ENOENT)
 	{
 		//file error!
-		do_log(log, *conn, STRING_APPEND_FILE, name, "File error.");
+		do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File error.", 0, 0);
 		return -1;
 	}
 	else if (file == -1)
 	{
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-		do_log(log, *conn, STRING_APPEND_FILE, name, "File doesn't exist.");
+		do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File doesn't exist.", 0, 0);
 	}
 	else
 	{
 		void* buf = NULL; size_t buf_size = 0; int ret;
-		ERRCHECK((ret = get_data(*conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)));
+		ERRCHECK((ret = get_data(thread_id, *conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)));
 		if (ret == 1) { free(buf); return 0; }
 
-		ERRCHECKDO(do_cache_miss(name, files, file_num, buf_size, state, out_msg), { free(buf); });
+		ERRCHECKDO(do_cache_miss(log, thread_id, name, files, file_num, buf_size, state, out_msg), { free(buf); });
 		ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
 
 		//append file
@@ -150,22 +150,22 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 			if (errno == EPERM)
 			{
 				out_msg->type |= MESSAGE_FILE_NOPEN;
-				do_log(log, *conn, STRING_APPEND_FILE, name, "File is closed.");
+				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File is closed.", 0, 0);
 			}
 			else if (errno == ENOENT)
 			{
 				out_msg->type |= MESSAGE_FILE_NEXISTS;
-				do_log(log, *conn, STRING_APPEND_FILE, name, "File was empty.");
+				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File was empty.", 0, 0);
 			}
 			else if (errno == EAGAIN)
 			{
 				out_msg->type |= MESSAGE_FILE_NLOCK;
-				do_log(log, *conn, STRING_APPEND_FILE, name, "Permission denied.");
+				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "Permission denied.", 0, 0);
 			}
 			else
 			{
 				//file error!
-				do_log(log, *conn, STRING_APPEND_FILE, name, "File error.");
+				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File error.", 0, 0);
 				free(buf);
 				return -1;
 			}
@@ -173,13 +173,13 @@ int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 		else
 		{
 			out_msg->type |= MESSAGE_OP_SUCC;
-			do_log(log, *conn, STRING_APPEND_FILE, name, "Success.");
+			do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "Success.", 0, buf_size);
 		}
 	}
 	return 0;
 }
 
-static int do_cache_miss(char* name, file_t* files, size_t file_num, size_t buf_size,
+static int do_cache_miss(log_t* log, int thread_id, char* name, file_t* files, size_t file_num, size_t buf_size,
 	shared_state* state, net_msg* out_msg)
 {
 	size_t curr_storage; size_t count = 0;
@@ -189,7 +189,7 @@ static int do_cache_miss(char* name, file_t* files, size_t file_num, size_t buf_
 
 	while (curr_storage + buf_size >= state->ro_max_storage)
 	{
-		cache_miss(name, files, file_num, state, out_msg);
+		cache_miss(log, thread_id, name, files, file_num, state, out_msg);
 
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
 		curr_storage = state->current_storage;
@@ -216,14 +216,14 @@ static int reserve_storage(size_t buf_size, shared_state* state)
 	return 0;
 }
 
-static int get_data(int conn, char* name, net_msg* in_msg, void** buf,
+static int get_data(int thread_id, int conn, char* name, net_msg* in_msg, void** buf,
 	size_t* buf_size, shared_state* state, log_t* log, char* log_op)
 {
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(size_t), buf_size));
 
 	if (*buf_size > state->ro_max_storage)
 	{
-		do_log(log, conn, log_op, name, "Data is too big.");
+		do_log(log, thread_id, conn, name, log_op, "Data is too big.", 0, 0);
 		return 1;
 	}
 

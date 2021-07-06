@@ -18,15 +18,15 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
+static int _open_file_create(int thread_id, int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
 
-static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
+static int _open_file_open(int thread_id, int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
 
-int do_open_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_open_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -39,19 +39,19 @@ int do_open_file(int* conn, net_msg* in_msg, net_msg* out_msg,
 	int fex = get_file(files, file_num, name);
 	if (fex == -1 && errno != ENOENT)
 	{
-		do_log(log, *conn, STRING_OPEN_FILE, name, "File error.");
+		do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
 		return -1;
 	}
 
 	if (GETFLAGS(in_msg->type) & MESSAGE_OPEN_OCREATE)	//create file
-		return _open_file_create(fex, name, conn, in_msg, out_msg, files, file_num,
+		return _open_file_create(thread_id, fex, name, conn, in_msg, out_msg, files, file_num,
 			log, lastop_writefile_pname, state);
 	else //open file
-		return _open_file_open(fex, name, conn, in_msg, out_msg, files, file_num,
+		return _open_file_open(thread_id, fex, name, conn, in_msg, out_msg, files, file_num,
 			log, lastop_writefile_pname, state);
 }
 
-static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
+static int _open_file_create(int thread_id, int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -67,7 +67,7 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 			//max files in memory!
 			out_msg->type |= MESSAGE_FILE_ERRMAXFILES;
 
-			do_log(log, *conn, STRING_OPEN_FILE, name, "Too many open files.");
+			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Too many open files.", 0, 0);
 		}
 		else
 		{
@@ -75,7 +75,7 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 			if (res == -1)
 			{
 				//file error!
-				do_log(log, *conn, STRING_OPEN_FILE, name, "File error.");
+				do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
 				return -1;
 			}
 			else
@@ -94,14 +94,12 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 					if (GETFLAGS(in_msg->type) & MESSAGE_OPEN_OLOCK)
 						strncpy(lastop_writefile_pname, name, FILE_NAME_MAX_SIZE);
 
-					do_log(log, *conn, STRING_OPEN_FILE, name, "Success.");
+					do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Success.", 0, 0);
 				}
 				else
 				{
 					//file error!
-					ERRCHECK(write_msg(*conn, out_msg));
-
-					do_log(log, *conn, STRING_OPEN_FILE, name, "File error.");
+					do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
 					return -1;
 				}
 			}
@@ -112,12 +110,12 @@ static int _open_file_create(int fslot, char* name, int* conn, net_msg* in_msg, 
 		//file already exists;
 		out_msg->type |= MESSAGE_FILE_EXISTS;
 
-		do_log(log, *conn, STRING_OPEN_FILE, name, "File already exists.");
+		do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File already exists.", 0, 0);
 	}
 	return 0;
 }
 
-static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
+static int _open_file_open(int thread_id, int fslot, char* name, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -131,20 +129,18 @@ static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, ne
 		{
 			out_msg->type |= MESSAGE_OP_SUCC;
 
-			do_log(log, *conn, STRING_OPEN_FILE, name, "Success.");
+			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Success.", 0, 0);
 		}
 		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
 
-			do_log(log, *conn, STRING_OPEN_FILE, name, "Permission denied.");
+			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "Permission denied.", 0, 0);
 		}
 		else
 		{
 			//file error!
-			ERRCHECK(write_msg(*conn, out_msg));
-
-			do_log(log, *conn, STRING_OPEN_FILE, name, "File error.");
+			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File error.", 0, 0);
 			return -1;
 		}
 	}
@@ -153,7 +149,7 @@ static int _open_file_open(int fslot, char* name, int* conn, net_msg* in_msg, ne
 		//file doesn't exist
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
 
-		do_log(log, *conn, STRING_OPEN_FILE, name, "File doesn't exist.");
+		do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File doesn't exist.", 0, 0);
 	}
 	return 0;
 }

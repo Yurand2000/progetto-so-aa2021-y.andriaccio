@@ -44,7 +44,7 @@ int reset_log(log_t* log)
 	time(&currtime);
 	localtime_r(&currtime, &time_print);
 
-	fprintf(logfile, "[%04d/%02d/%02d-%02d:%02d:%02d] Opening log file.\n",
+	fprintf(logfile, "[%04d/%02d/%02d-%02d:%02d:%02d]\tOpening log file.\n",
 		(time_print.tm_year + 1900), (time_print.tm_mon + 1), time_print.tm_mday,
 		time_print.tm_hour, time_print.tm_min, time_print.tm_sec);
 	fclose(logfile);
@@ -66,7 +66,7 @@ int print_line_to_log_file(log_t* log, char* line)
 	time(&currtime);
 	localtime_r(&currtime, &time_print);
 
-	fprintf(logfile, "[%04d/%02d/%02d-%02d:%02d:%02d] %s\n",
+	fprintf(logfile, "[%04d/%02d/%02d-%02d:%02d:%02d]\t%s\n",
 		(time_print.tm_year + 1900), (time_print.tm_mon + 1), time_print.tm_mday,
 		time_print.tm_hour, time_print.tm_min, time_print.tm_sec, line);
 	fclose(logfile);

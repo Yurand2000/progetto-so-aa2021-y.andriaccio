@@ -34,30 +34,30 @@ parse_operation()
 
 parse_line()
 {
-  #line format 1: [timestamp] Thread:$$$ File:$$$ Operation:$$$ Outcome:$$$ ReadSize:$$$ WriteSize:$$$ 
+  #line format 1: [timestamp] Thread:$$$ File:$$$ Client-Operation:[$$$-$$$] Outcome:$$$ ReadSize:$$$ WriteSize:$$$ 
   #line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
-  local FIRST= cut - -d ' ' -f 1 < $1
+  local FIRST= cut - -d '\t' -f 1 < $1
   local TEMP=""
   if [ $FIRST == "MAIN" ]; then
-    TEMP= cut - -d ' ' -f 2 < $1
+    TEMP= cut - -d '\t' -f 2 < $1
     MAX_SIZE= cut - -d ':' -f 2 < $TEMP
-    TEMP= cut - -d ' ' -f 3 < $1
+    TEMP= cut - -d '\t' -f 3 < $1
     MAX_FILES= cut - -d ':' -f 2 < $TEMP
-    TEMP= cut - -d ' ' -f 4 < $1
+    TEMP= cut - -d '\t' -f 4 < $1
     MAX_CONN= cut - -d ':' -f 2 < $TEMP
-    TEMP= cut - -d ' ' -f 5 < $1
+    TEMP= cut - -d '\t' -f 5 < $1
     CACHE_MISS= cut - -d ':' -f 2 < $TEMP
-  else
+  else if [(grep - "Thread" < $FIRST)]; then
     #Thread:$$$
     TEMP= cut - -d ':' -f 2 < $FIRST
     increment_thread $TEMP
     
-    #Operation:$$$
+    #Client-Operation:[$$$-$$$]
     TEMP= cut - -d ':' -f 4 < $1
     parse_operation $TEMP
     
     #ReadSize:$$$
-    TEMP= cut - -d ' ' -f 6 < $1
+    TEMP= cut - -d '\t' -f 6 < $1
     TEMP= cut - -d ':' -f 2 < $TEMP
     if [TEMP -gt 0]; then
       READ++
@@ -65,7 +65,7 @@ parse_line()
     fi
     
     #WriteSize:$$$
-    TEMP= cut - -d ' ' -f 7 < $1
+    TEMP= cut - -d '\t' -f 7 < $1
     TEMP= cut - -d ':' -f 2 < $TEMP
     if [TEMP -gt 0]; then
       WRITE++

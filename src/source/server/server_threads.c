@@ -36,7 +36,7 @@ int prepare_threads(pthread_t** threads, size_t* threads_count, worker_data** wo
 	MALLOC(*work_data, sizeof(worker_data) * *threads_count);
 	for (size_t i = 0; i < *threads_count; i++)
 	{
-		init_worker_data(&(*work_data)[i], files, file_num, log, state);
+		init_worker_data(&(*work_data)[i], i, files, file_num, log, state);
 
 		//spawn thread
 		ERRCHECK(pthread_create(&(*threads)[i], NULL, worker_routine, &(*work_data)[i]));

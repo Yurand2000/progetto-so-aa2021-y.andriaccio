@@ -126,11 +126,13 @@ int parse_config_from_file(cfg_t* cfg, char const* filename)
 	return 0;
 }
 
-int print_stats(shared_state* state, file_t* files, size_t file_num)
+int print_stats(log_t* log, shared_state* state, file_t* files, size_t file_num)
 {
+	do_log_main(log, state->max_reached_storage, state->max_reached_files,
+		state->max_reached_conns, state->cache_miss_execs);
 	printf("* STATISTICS: *\n  Max Storage: %ld bytes (%f Mb);\n  Max Files: %d;"
 		"\n  Chace Miss Calls: %d;\n  Files still in storage: %d\n",
-		state->max_reached_storage, state->max_reached_storage / (float)(1024*1024),state->max_reached_files,
+		state->max_reached_storage, state->max_reached_storage / (float)(1024*1024), state->max_reached_files,
 		state->cache_miss_execs, state->current_files);
 	for (size_t i = 0; i < file_num; i++)
 	{

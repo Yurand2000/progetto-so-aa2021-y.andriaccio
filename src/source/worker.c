@@ -20,7 +20,7 @@
 
 #define THREAD_ERRCHECK(cond) if(cond == -1) { perror("Thread failure"); return (void*)0; };
 
-int init_worker_data(worker_data* wd, file_t* files, size_t file_num,
+int init_worker_data(worker_data* wd, int thread_id, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared)
 {
 	if (wd == NULL || files == NULL || log == NULL || shared == NULL || file_num == 0) ERRSET(EINVAL, -1);
@@ -31,6 +31,7 @@ int init_worker_data(worker_data* wd, file_t* files, size_t file_num,
 	wd->exit = 0;
 	wd->in_conn = wd->add_conn = -1;
 
+	wd->thread_id = thread_id;
 	wd->files = files;
 	wd->file_num = file_num;
 	wd->log = log;
@@ -49,7 +50,7 @@ int destroy_worker_data(worker_data* wd)
 }
 
 //-----------------------------------------------------------------------------
-static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
+static int worker_do(int thread_id, int* conn, int* newconn, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared);
 
 void* worker_routine(void* args)
@@ -72,7 +73,7 @@ void* worker_routine(void* args)
 			int conn = data->in_conn; int newconn = -1;
 			THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));
 
-			THREAD_ERRCHECK(worker_do(&conn, &newconn, data->files,
+			THREAD_ERRCHECK(worker_do(data->thread_id, &conn, &newconn, data->files,
 				data->file_num, data->log, data->shared));
 			worker_did++;
 
@@ -92,13 +93,13 @@ void* worker_routine(void* args)
  * connection has been added or dropped.
  * lastop_writefile_pname contains the pathname of the file if the last operation
  * was an open with O_CREATE and O_LOCK flags and had success. */
-static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
+static int worker_do(int thread_id, int* conn, int* newconn, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared)
 {
 	net_msg in_msg, out_msg; int ret; char* lastop;
 
 	if (*conn == shared->ro_acceptor_fd)
-		return do_acceptor(conn, newconn, log, shared);
+		return do_acceptor(thread_id, conn, newconn, log, shared);
 
 	//read message from connection
 	create_message(&in_msg);
@@ -111,43 +112,43 @@ static int worker_do(int* conn, int* newconn, file_t* files, size_t file_num,
 	ERRCHECK(get_client_lastop(shared, *conn, &lastop));
 	if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_CONN))
 	{
-		ret = do_close_connection(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_close_connection(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 		destroy_message(&out_msg);
 		destroy_message(&in_msg);
 		return ret;
 	}
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_OPEN_FILE))
-		ret = do_open_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_open_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_CLOSE_FILE))
-		ret = do_close_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_close_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_READ_FILE))
-		ret = do_read_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_read_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_READN_FILE))
-		ret = do_readn_files(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_readn_files(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_WRITE_FILE))
-		ret = do_write_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_write_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_APPEND_FILE))
-		ret = do_append_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_append_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_LOCK_FILE))
-		ret = do_lock_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_lock_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_UNLOCK_FILE))
-		ret = do_unlock_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_unlock_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else if (CHECK_CLIENT_MSG_TYPE(in_msg.type, MESSAGE_REMOVE_FILE))
-		ret = do_remove_file(conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
+		ret = do_remove_file(thread_id, conn, &in_msg, &out_msg, files, file_num, log, lastop, shared);
 
 	else
 	{
 		out_msg.type = MESSAGE_NULL;
-		do_log(log, *conn, "Unknown Operation", "none", "Unknown Operation");
+		do_log(log, thread_id, *conn, "none", "Unknown Operation", "Nothing done.", 0, 0);
 	}
 
 	set_checksum(&out_msg);

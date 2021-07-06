@@ -22,7 +22,7 @@ int parse_cmd_start_log(int argc, char* argv[], cfg_t* config_data, log_t* log);
 int command_line_parsing(int argc, char* argv[], cfg_t* config_data);
 void init_default_config(cfg_t* cfg);
 int parse_config_from_file(cfg_t* cfg, char const* filename);
-int print_stats(shared_state* state, file_t* files, size_t file_num);
+int print_stats(log_t* log, shared_state* state, file_t* files, size_t file_num);
 
 //server_socket.c
 int prepare_socket(int* socket, cfg_t* config);

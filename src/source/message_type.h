@@ -78,36 +78,17 @@ typedef uint32_t msg_t;
 #define MESSAGE_OPEN_OLOCK FLAG(2)
 
 //client request to string
-#define STRING_OPEN_CONN "open connection"
-#define STRING_CLOSE_CONN "close connection"
-#define STRING_OPEN_FILE "open file"
-#define STRING_CLOSE_FILE "close file"
-#define STRING_READ_FILE "read file"
-#define STRING_READN_FILE "read n files"
-#define STRING_WRITE_FILE "write file"
-#define STRING_APPEND_FILE "append to file"
-#define STRING_LOCK_FILE "lock file"
-#define STRING_UNLOCK_FILE "unlock file"
-#define STRING_REMOVE_FILE "remove file"
-
-//there are no checks on these macro functions.
-#define GET_STRING_FROM_OPERATION(msg, out) {\
-	if(msg & MESSAGE_OPEN_CONN) out = STRING_OPEN_CONN;\
-	else if(msg & MESSAGE_CLOSE_CONN) out = STRING_CLOSE_CONN;\
-	else if(msg & MESSAGE_OPEN_FILE) out = STRING_OPEN_FILE;\
-	else if(msg & MESSAGE_CLOSE_FILE) out = STRING_CLOSE_FILE;\
-	else if(msg & MESSAGE_READ_FILE) out = STRING_READ_FILE;\
-	else if(msg & MESSAGE_READN_FILE) out = STRING_READN_FILE;\
-	else if(msg & MESSAGE_WRITE_FILE) out = STRING_WRITE_FILE;\
-	else if(msg & MESSAGE_APPEND_FILE) out = STRING_APPEND_FILE;\
-	else if(msg & MESSAGE_LOCK_FILE) out = STRING_LOCK_FILE;\
-	else if(msg & MESSAGE_UNLOCK_FILE) out = STRING_UNLOCK_FILE;\
-	else if(msg & MESSAGE_REMOVE_FILE) out = STRING_REMOVE_FILE;\
-}
-
-#define GET_STRING_FROM_FLAGS(msg, out)  {\
-	if(msg & MESSAGE_OPEN_OCREATE) out = STRING_OPEN_OCREATE;\
-	else if(msg & MESSAGE_OPEN_OLOCK) out = STRING_OPEN_OLOCK;\
-}
+#define STRING_OPEN_CONN "Open_Connection"
+#define STRING_CLOSE_CONN "Close_Connection"
+#define STRING_OPEN_FILE "Open_File"
+#define STRING_CLOSE_FILE "Close_File"
+#define STRING_READ_FILE "Read_File"
+#define STRING_READN_FILE "Read_N_Files"
+#define STRING_WRITE_FILE "Write_File"
+#define STRING_APPEND_FILE "Append_To_File"
+#define STRING_LOCK_FILE "Lock_File"
+#define STRING_UNLOCK_FILE "Unlock_File"
+#define STRING_REMOVE_FILE "Remove_File"
+#define STRING_CACHE_MISS "CacheMiss"
 
 #endif

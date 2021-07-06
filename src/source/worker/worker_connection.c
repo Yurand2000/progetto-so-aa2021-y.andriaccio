@@ -18,7 +18,7 @@
 #include "../message_type.h"
 #include "../net_msg_macros.h"
 
-int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
+int do_acceptor(int thread_id, int* acceptor, int* newconn, log_t* log, shared_state* shared)
 {
 	net_msg in_msg, out_msg;
 
@@ -27,7 +27,7 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 	ERRCHECK(pthread_mutex_unlock(&shared->state_mux));
 	if (curr_conns >= shared->ro_max_conns)
 	{
-		do_log(log, -1, STRING_OPEN_CONN, "none", "Max clients connected.");
+		do_log(log, thread_id, -1, "none", STRING_OPEN_CONN, "Max clients connected.", 0, 0);
 		return 0;
 	}
 
@@ -46,7 +46,7 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 		if (add_client(shared, *newconn) == -1)
 		{
 			close(*newconn); *newconn = -1;
-			do_log(log, *newconn, STRING_OPEN_CONN, "none", "Max clients connected. [2]");
+			do_log(log, thread_id, *newconn, "none", STRING_OPEN_CONN, "Max clients connected. [2]", 0, 0);
 		}
 		else
 		{
@@ -54,14 +54,14 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 			set_checksum(&out_msg);
 			ERRCHECK(write_msg(*newconn, &out_msg));
 
-			do_log(log, *newconn, STRING_OPEN_CONN, "none", "Client connected.");
+			do_log(log, thread_id, *newconn, "none", STRING_OPEN_CONN, "Client connected.", 0, 0);
 		}
 	}
 	else
 	{
 		close(*newconn); *newconn = -1;
 
-		do_log(log, -1, STRING_OPEN_CONN, "none", "Unknown client tried to connect.");
+		do_log(log, thread_id, -1, "none", STRING_OPEN_CONN, "Unknown client tried to connect.", 0, 0);
 	}
 
 	destroy_message(&in_msg);
@@ -69,7 +69,7 @@ int do_acceptor(int* acceptor, int* newconn, log_t* log, shared_state* shared)
 	return 0;
 }
 
-int do_close_connection(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_close_connection(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state)
 {
@@ -92,7 +92,7 @@ int do_close_connection(int* conn, net_msg* in_msg, net_msg* out_msg,
 	set_checksum(out_msg);
 	ERRCHECK(write_msg(*conn, out_msg));
 
-	do_log(log, *conn, STRING_CLOSE_CONN, "none", "Connection closed");
+	do_log(log, thread_id, *conn, "none", STRING_CLOSE_CONN, "Connection closed.", 0, 0);
 	ERRCHECK(remove_client(state, *conn));
 
 	//close the connection

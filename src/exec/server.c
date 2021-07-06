@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 
 	//print stats
 	printf("* * * SERVER TERMINATED * * *\n");
-	PERRCHECK(print_stats(&state, files, file_num), "Statistics printer error");
+	PERRCHECK(print_stats(&log_file, &state, files, file_num), "Statistics printer error");
 
 	//destruction -------------------------------------------------------------
 	free(poll_array);

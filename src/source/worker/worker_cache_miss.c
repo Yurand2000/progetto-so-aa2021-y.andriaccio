@@ -6,6 +6,7 @@
 #include "../file.h"
 #include "../net_msg.h"
 #include "../errset.h"
+#include "../message_type.h"
 
 #define FILE_LOOP_DO(nodel_file, files, file_num, todo) \
 int res;\
@@ -22,20 +23,20 @@ for (size_t i = 0; i < file_num; i++)\
 	}\
 }\
 
-int cache_miss(char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
+int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
 {
 	void* buf = NULL; char* name = NULL; size_t buf_size = 0, name_size = 0;
 	//cache miss call here
 	switch (state->ro_cache_miss_algorithm)
 	{
 	case ALGO_LFU:
-		evict_LFU(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_LFU(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 		break;
 	case ALGO_LRU:
-		evict_LRU(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_LRU(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 		break;
 	case ALGO_FIFO:
-		evict_FIFO(nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		evict_FIFO(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
 	default:
 		break;
 	}
@@ -54,7 +55,7 @@ int cache_miss(char* nodel_file, file_t* files, size_t file_num, shared_state* s
 	return 0;
 }
 
-int delete_evicted(int file, file_t* files, shared_state* state,
+int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t storage;
@@ -69,10 +70,12 @@ int delete_evicted(int file, file_t* files, shared_state* state,
 	state->current_storage -= storage;
 	state->current_files--;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+
+	do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
 	return 0;
 }
 
-int evict_FIFO(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_older = 0;
@@ -89,11 +92,11 @@ int evict_FIFO(char* nodel_file, file_t* files, size_t file_num, shared_state* s
 		}
 	});
 
-	ERRCHECK(delete_evicted(curr_older, files, state, buf, buf_size, name, name_size));
+	ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
-int evict_LRU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
@@ -111,11 +114,11 @@ int evict_LRU(char* nodel_file, file_t* files, size_t file_num, shared_state* st
 		}
 	});
 
-	ERRCHECK(delete_evicted(clock_pos, files, state, buf, buf_size, name, name_size));
+	ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
-int evict_LFU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t curr_least_used = 0;
@@ -132,6 +135,6 @@ int evict_LFU(char* nodel_file, file_t* files, size_t file_num, shared_state* st
 		}
 	});
 
-	ERRCHECK(delete_evicted(curr_least_used, files, state, buf, buf_size, name, name_size));
+	ERRCHECK(delete_evicted(log, thread, curr_least_used, files, state, buf, buf_size, name, name_size));
 	return 0;
 }

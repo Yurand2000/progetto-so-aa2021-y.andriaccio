@@ -56,10 +56,21 @@ int convert_slashes_to_underscores(char* name)
 	return 0;
 }
 
-void do_log(log_t* log, int fileno, char* operation, char* file, char* error)
+void do_log(log_t* log, int thread, int client, char* file, char* operation,
+	char* outcome, int readsize, int writesize)
 {
 	char log_msg[MESSAGE_MAX_SIZE];
-	snprintf(log_msg, MESSAGE_MAX_SIZE, "Client: %d; Op: %s; File: %s; %s",
-	fileno, operation, file, error);
+	snprintf(log_msg, MESSAGE_MAX_SIZE, "Thread:%d\tFile:%s\tClient-Operation:[%d-%s]\t"
+		"Outcome:%s\tReadSize:%d\tWriteSize:%d",
+		thread, file, client, operation, outcome, readsize, writesize);
+	print_line_to_log_file(log, log_msg);
+}
+
+void do_log_main(log_t* log, int max_size, int max_files, 
+	int max_conns, int cache_miss)
+{
+	char log_msg[MESSAGE_MAX_SIZE];
+	snprintf(log_msg, MESSAGE_MAX_SIZE, "MAIN\tMaxSize:%d\tMaxFiles:%d\tMaxConn:%d\tCacheMiss:%d",
+		max_size, max_files, max_conns, cache_miss);
 	print_line_to_log_file(log, log_msg);
 }

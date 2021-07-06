@@ -31,18 +31,21 @@ int get_file(file_t* files, size_t file_num, const char* filename);
 int read_file_name(net_msg* msg, char* buffer_name, size_t buffer_size);
 
 /* cache miss functions. */
-int cache_miss(char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg);
-int evict_FIFO(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg);
+int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size);
-int evict_LRU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size);
-int evict_LFU(char* nodel_file, file_t* files, size_t file_num, shared_state* state,
+int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size);
-int delete_evicted(int file, file_t* files, shared_state* state,
+int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size);
 int convert_slashes_to_underscores(char* name);
 
-void do_log(log_t* log, int fileno, char* operation, char* file, char* error);
+void do_log(log_t* log, int thread, int client, char* file, char* operation,
+	char* outcome, int readsize, int writesize);
+void do_log_main(log_t* log, int max_size, int max_files,
+	int max_conns, int cache_miss);
 
 #define SET_EMPTY_STRING(str) str[0] = '\0';
 

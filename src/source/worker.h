@@ -24,6 +24,7 @@ typedef struct worker_data {
 	int add_conn;
 
 	//mux not needed for this data
+	int thread_id;
 	file_t* files;
 	size_t file_num;
 	log_t* log;
@@ -31,7 +32,7 @@ typedef struct worker_data {
 	shared_state* shared;
 } worker_data;
 
-int init_worker_data(worker_data* wd, file_t* files, size_t file_num,
+int init_worker_data(worker_data* wd, int thread_id, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared);
 int destroy_worker_data(worker_data* wd);
 
@@ -40,35 +41,35 @@ int destroy_worker_data(worker_data* wd);
 void* worker_routine(void* args);
 
 /* private functions implemented externally from the worker.c file. */
-int do_acceptor(int* conn, int* newconn, log_t* log, shared_state* shared);
-int do_close_connection(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_acceptor(int thread_id, int* conn, int* newconn, log_t* log, shared_state* shared);
+int do_close_connection(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_open_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_open_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_close_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_close_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_read_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_read_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_readn_files(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_write_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_write_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_append_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_append_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_lock_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_lock_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_unlock_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_unlock_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
-int do_remove_file(int* conn, net_msg* in_msg, net_msg* out_msg,
+int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	file_t* files, size_t file_num, log_t* log, char* lastop_writefile_pname,
 	shared_state* state);
 
