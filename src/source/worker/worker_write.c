@@ -53,7 +53,7 @@ int do_write_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 		{
 			void* buf = NULL; size_t buf_size = 0; int ret;
 			ERRCHECK( (ret = get_data(thread_id, *conn, name, in_msg, &buf, &buf_size, state, log, STRING_WRITE_FILE)) );
-			if (ret == 1) { free(buf); return 0; }
+			if (ret == 1) return 0;
 
 			ERRCHECKDO(do_cache_miss(log, thread_id, name, files, file_num, buf_size, state, out_msg), { free(buf); });
 			ERRCHECKDO(reserve_storage(buf_size, state), { free(buf); });
@@ -187,7 +187,7 @@ static int do_cache_miss(log_t* log, int thread_id, char* name, file_t* files, s
 	curr_storage = state->current_storage;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 
-	while (curr_storage + buf_size >= state->ro_max_storage)
+	while (curr_storage + buf_size > state->ro_max_storage)
 	{
 		cache_miss(log, thread_id, name, files, file_num, state, out_msg);
 

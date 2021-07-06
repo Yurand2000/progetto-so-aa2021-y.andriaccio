@@ -80,7 +80,7 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 {
 	size_t curr_older = 0;
 	time_t curr_older_time = time(NULL);
-	time_t temp;
+	time_t temp; int selected = 0;
 	
 	FILE_LOOP_DO(nodel_file, files, file_num, 
 	{
@@ -89,10 +89,11 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 		{
 			curr_older_time = temp;
 			curr_older = i;
+			selected = 1;
 		}
 	});
 
-	ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
+	if(selected) ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
@@ -102,7 +103,7 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
 	size_t clock_pos = state->last_evicted;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-	char temp = 1;
+	char temp = 1, selected = 0;
 
 	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
@@ -111,10 +112,11 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 		{
 			update_lru(&files[clock_pos], 0);
 			clock_pos = (clock_pos + 1) % file_num;
+			selected = 1;
 		}
 	});
 
-	ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
+	if (selected) ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
 
@@ -123,7 +125,7 @@ int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 {
 	size_t curr_least_used = 0;
 	int curr_least_used_freq = INT_MAX;
-	int temp;
+	int temp, selected = 0;
 	
 	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
@@ -132,9 +134,10 @@ int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 		{
 			curr_least_used_freq = temp;
 			curr_least_used = i;
+			selected = 1;
 		}
 	});
 
-	ERRCHECK(delete_evicted(log, thread, curr_least_used, files, state, buf, buf_size, name, name_size));
+	if(selected) ERRCHECK(delete_evicted(log, thread, curr_least_used, files, state, buf, buf_size, name, name_size));
 	return 0;
 }
