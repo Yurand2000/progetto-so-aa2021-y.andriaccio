@@ -471,7 +471,6 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 	char* buf = NULL; char* name = NULL;
 
 	ERRCHECKDO(pop_buf(&msg->data, sizeof(size_t), &count), { free(name); free(buf); });
-	printf("Debug ------- Count: %ld\n", count);
 	for (size_t i = 0; i < count; i++)
 	{
 		//get name
@@ -495,7 +494,6 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 
 		//write to file
 		ERRCHECKDO(write_buf_to_file(name, buf, len, dirname), { free(name); free(buf); });
-		printf("Debug ------- File: %s\n", name);
 	}
 	free(name);
 	free(buf);

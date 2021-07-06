@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
 static int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs)
 {
-	int option, prec;
+	int option, prec = 0;
 	while((option = getopt(argc, argv, "-:hf:w:W:a:D:r:R::d:t:l:u:c:p")) != -1)
 	{
 		switch(option)
