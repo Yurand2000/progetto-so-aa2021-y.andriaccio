@@ -1,16 +1,30 @@
-#!bin/bash
+#!/bin/bash
 
-SERVERPID = $!  #get the server PID, which is probably not the last one...
-CLIENT = ./build/exec/client.o
-SOCKFILE = ./build/exec/socket.sk
+CLIENT=./build/exec/client.out
+SOCKFILE=./socket.sk
+TESTDIR=src/tests/test2
+CLIENT_OPT="-f $SOCKFILE -t 50 -p"
 
-rm -r ./tests/test1/return
-mkdir ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -w ./tests/test1/writeall -D ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -w ./tests/test1/writeall_part,1 -D ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -W ./tests/test1/file1.txt,./tests/test1/file2.txt -u ./tests/test1/file1.txt,./tests/test1/file2.txt -D ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -r ./tests/test1/file1.txt,./tests/test1/file2.txt -d ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -R -d ./tests/test1/return
-$CLIENT -f $SOCKFILE -t 200 -p -l ./tests/test1/file1.txt,./tests/test1/file2.txt -c ./tests/test1/file1.txt,./tests/test1/file2.txt
+#create the necessary folders, suppress their output.
+rm -r $TESTDIR/cmiss > /dev/null 2> /dev/null
+mkdir $TESTDIR/cmiss > /dev/null 2> /dev/null
 
-kill $SERVERPID -s SIGHUP 
+sleep 3
+
+#launch clients
+echo "-------------------------"
+echo "Fill the server with max files and capacity"
+$CLIENT $CLIENT_OPT -w $TESTDIR/fill -D $TESTDIR/cmiss
+echo "-------------------------"
+echo "Cache miss 1"
+$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_0.txt -D $TESTDIR/cmiss
+echo "-------------------------"
+echo "Cache miss 2"
+$CLIENT $CLIENT_OPT -c $TESTDIR/fill/file_0.txt -W $TESTDIR/data/file_1.txt -D $TESTDIR/cmiss &
+$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_4.txt -D $TESTDIR/cmiss &
+$CLIENT $CLIENT_OPT -c $TESTDIR/fill/file_3.txt -W $TESTDIR/data/file_3.txt -D $TESTDIR/cmiss &
+$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_9.txt -D $TESTDIR/cmiss &
+sleep 1
+echo "-------------------------"
+
+exit 0

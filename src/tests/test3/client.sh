@@ -1,19 +1,23 @@
-#!bin/bash
+#!/bin/bash
 
-SERVERPID = $!  #get the server PID, which is probably not the last one...
-CLIENT = ./build/exec/client.o
-SOCKFILE = ./build/exec/socket.sk
+TESTDIR=src/tests/test3
 
-rm -r ./tests/test3/return
-mkdir ./tests/test3/return
+#create the necessary folders, suppress their output.
+rm -r $TESTDIR/ret > /dev/null 2> /dev/null
+mkdir $TESTDIR/ret > /dev/null 2> /dev/null
 
-REQ1 = $CLIENT -f $SOCKFILE -t 0 -w ./tests/test3/writeall -D ./tests/test3/return
-REQ2 = $CLIENT -f $SOCKFILE -t 0 -r ./tests/test3/file1.txt,./tests/test3/file2.txt -d ./tests/test3/return
-REQ3 = $CLIENT -f $SOCKFILE -t 0 -R n=5 -d ./tests/test3/return
-REQ4 = $CLIENT -f $SOCKFILE -t 0 -W ./tests/test3/file1.txt,./tests/test3/file2.txt
-REQ5 = $CLIENT -f $SOCKFILE -t 0 -l ./tests/test3/file1.txt,./tests/test3/file2.txt -c ./tests/test3/file1.txt,./tests/test3/file2.txt
-CURR = 0
+sleep 5
 
+MAX_CLIENTS=11
+for((i = 0; i < $MAX_CLIENTS; i++)); do
+	$TESTDIR/run_client.sh &
+	CLIENTS[$i]=$!
+done
 
+sleep 5
 
-kill $SERVERPID -s SIGINT
+for((i = 0; i < $MAX_CLIENTS; i++)); do
+	kill ${CLIENTS[$i]}
+done
+
+exit 0

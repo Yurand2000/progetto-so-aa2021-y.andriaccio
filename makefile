@@ -65,17 +65,11 @@ client_release : CFLAGS += $(CRELFLAGS)
 client_release : client
 
 test1 : all
-	@valgrind --leak-check=full $(BEXEC)/server.out -c $(TESTD)/test1/test1.cfg &
-	@$(TESTD)/test1/client.sh
-	@kill -s SIGHUP $!
+	@$(TESTD)/test1/test1.sh $(BLDEXE)
 test2 : all
-	@$(BEXEC)/server.out -c $(TESTD)/test2/test2.cfg &
-	@$(TESTD)/test2/client.sh
-	@kill -s SIGHUP $!
+	@$(TESTD)/test2/test2.sh $(BLDEXE)
 test3 : all
-	@$(BEXEC)/server.out -c $(TESTD)/test3/test3.cfg &
-	@$(TESTD)/test3/client.sh
-	@kill -s SIGINT $!
+	@$(TESTD)/test3/test3.sh $(BLDEXE)
 
 #UNIT TESTS
 utest_dirs :

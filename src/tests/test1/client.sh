@@ -2,7 +2,7 @@
 
 CLIENT=./build/exec/client.out
 SOCKFILE=./socket.sk
-TESTDIR=./src/tests/test1
+TESTDIR=src/tests/test1
 CLIENT_OPT="-f $SOCKFILE -t 200 -p"
 
 #create the necessary folders, suppress their output.
