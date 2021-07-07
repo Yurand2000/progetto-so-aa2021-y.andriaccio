@@ -371,24 +371,25 @@ int unlock_file(file_t* file, int who)
 	return 0;
 }
 
-int remove_file(file_t* file, int who)
+int remove_file(file_t* file, int who, size_t* data_size)
 {
 	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
 	if (file->owner == OWNER_NULL || file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
+	*data_size = file->data_size + file->new_size;
 	ERRCHECKDO(reset_file_struct(file), UNLOCK(file));
 	UNLOCK(file);
 	return 0;	
 }
 
-int force_remove_file(file_t* file)
+int force_remove_file(file_t* file, size_t* data_size)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
 	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 
-	ERRCHECK(remove_file(file, OWNER_ADMIN));
+	ERRCHECK(remove_file(file, OWNER_ADMIN, data_size)));
 	return 0;
 }

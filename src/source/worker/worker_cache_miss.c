@@ -68,7 +68,6 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	size_t storage; int err;
-	ERRCHECK(get_size(&files[file], &storage));
 
 	ERRCHECK(force_open_file(&files[file]));
 	err = force_read_file(&files[file], buf, buf_size, buf_size);
@@ -76,7 +75,7 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 	else
 	{
 		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
-		ERRCHECK(force_remove_file(&files[file]));
+		ERRCHECK(force_remove_file(&files[file], &storage));
 
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
 		state->current_storage -= storage;

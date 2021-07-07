@@ -35,8 +35,7 @@ int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 		else
 		{
 			size_t size;
-			ERRCHECK(get_size(&files[fex], &size));
-			int lck = remove_file(&files[fex], *conn);
+			int lck = remove_file(&files[fex], *conn, &size);
 			if (lck == 0)
 			{
 				out_msg->type |= MESSAGE_OP_SUCC;
