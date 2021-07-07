@@ -67,8 +67,7 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
-	size_t storage;
-
+	long storage = 0;
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
 	if (is_existing_file(&files[file]) == 0)
 	{
