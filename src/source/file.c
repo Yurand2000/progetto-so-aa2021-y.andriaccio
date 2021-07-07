@@ -395,7 +395,7 @@ int unlock_file(file_t* file, int who)
 	return 0;
 }
 
-int remove_file(file_t* file, int who, size_t* data_size)
+int remove_file(file_t* file, int who, long* data_size)
 {
 	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
@@ -408,7 +408,7 @@ int remove_file(file_t* file, int who, size_t* data_size)
 	return 0;	
 }
 
-int force_remove_file(file_t* file, size_t* data_size)
+int force_remove_file(file_t* file, long* data_size)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);

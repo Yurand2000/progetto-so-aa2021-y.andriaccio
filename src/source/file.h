@@ -74,13 +74,13 @@ int append_file(file_t* file, int who, const void* data, size_t data_size);
 
 int lock_file(file_t* file, int who);
 int unlock_file(file_t* file, int who);
-int remove_file(file_t* file, int who, size_t* data_size);
+int remove_file(file_t* file, int who, long* data_size);
 
 /* forcefully open the file. */
 int force_open_file(file_t* file);
 /* forcefully read the whole file into the given buffer, reallocating if necessary. */
 int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t* read_size);
 /* forcefully removes a file, regardless of its state. */
-int force_remove_file(file_t* file, size_t* data_size);
+int force_remove_file(file_t* file, long* data_size);
 
 #endif

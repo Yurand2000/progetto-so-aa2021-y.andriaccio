@@ -34,7 +34,7 @@ int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 			out_msg->type |= MESSAGE_FILE_NLOCK;
 		else
 		{
-			size_t size;
+			long size = 0;
 			int lck = remove_file(&files[fex], *conn, &size);
 			if (lck == 0)
 			{

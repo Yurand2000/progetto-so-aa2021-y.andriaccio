@@ -31,7 +31,7 @@ int do_close_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	int fex = get_file(files, file_num, name);
 	if (fex >= 0)
 	{
-		long diff;
+		long diff = 0;
 		int lck = close_file(&files[fex], *conn, &diff);
 		if (lck == 0)
 		{
