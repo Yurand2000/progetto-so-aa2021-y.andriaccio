@@ -390,6 +390,6 @@ int force_remove_file(file_t* file, size_t* data_size)
 	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 
-	ERRCHECK(remove_file(file, OWNER_ADMIN, data_size)));
+	ERRCHECK(remove_file(file, OWNER_ADMIN, data_size));
 	return 0;
 }
