@@ -88,45 +88,55 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	int n, res, error; size_t count = 0;
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(int), &n));
 
-	size_t i = 0; long diff;
+	size_t i = 0; long diff; int err;
 	void* buf = NULL; size_t buf_size = 0, read_size; int total_read = 0;
 	while (i < file_num && (n <= 0 || count < n))
 	{
 		if ((is_existing_file(&files[i]) == 0))
 		{
-			ERRCHECKDO(open_file(&files[i], *conn), { free(buf); });
-
-			error = 0;
-			res = read_file(&files[i], *conn, &buf, &buf_size, &read_size);
-			error = errno;
-
-			ERRCHECKDO(close_file(&files[i], *conn, &diff), { free(buf); });
-			ERRCHECK(pthread_mutex_lock(&state->state_mux));
-			state->current_storage -= diff;
-			ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-
-			if (res == 0)
+			err = open_file(&files[i], *conn);
+			if (err == -1)
 			{
-				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
-				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
-				total_read += read_size;
+				if (errno != ENOENT && errno != EAGAIN) { free(buf); return -1; }
+			}
+			else
+			{
+				res = read_file(&files[i], *conn, &buf, &buf_size, &read_size);
+				error = errno;
 
-				ERRCHECKDO(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size),
+				diff = 0;
+				err = close_file(&files[i], *conn, &diff);
+				if (err == -1 && errno != ENOENT && errno != EAGAIN) { free(buf); return -1; }
+				if (diff != 0)
+				{
+					ERRCHECK(pthread_mutex_lock(&state->state_mux));
+					state->current_storage -= diff;
+					ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+				}
+
+				if (res == 0)
+				{
+					ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
+					ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+					total_read += read_size;
+
+					ERRCHECKDO(get_file_name(&files[i], (char**)(&buf), &buf_size, &read_size),
 					{
 						do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
-						free(buf);
-						return -1;
+					free(buf);
+					return -1;
 					});
-				ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
-				ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
-				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
-				count++;
-			}
-			else if(error != EAGAIN && error != EPERM && error != ENOENT)
-			{
-				do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
-				free(buf);
-				return -1;
+					ERRCHECKDO(convert_slashes_to_underscores((char*)buf), { free(buf); });
+					ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_size, buf), { free(buf); });
+					ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
+					count++;
+				}
+				else if (error != EAGAIN && error != EPERM && error != ENOENT)
+				{
+					do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
+					free(buf);
+					return -1;
+				}
 			}
 		}
 		i++;
