@@ -72,22 +72,22 @@ test3	: all
 	@$(TESTD)/test3/test3.sh $(BLDEXE)
 
 #CLEAR FUNCTIONS
-clear	: clean
-clean	:
+clear : clean
+clean :
 	@-rm -f -r $(BUILD)
 	@-rm -f -r $(COVERAGE)	
 
-cleanobj	:
+cleanobj :
 	@-rm -r $(BUILD)/*/*.o
 
-cleangcov	:
+cleangcov :
 	@-rm -r $(BUILD)/*/*.gcda
 	@-rm -r $(BUILD)/*/*.gcno
 	@-rm -f -r $(COVERAGE)
 
 #rule template for obj compilation
-obj_from_src	=	$(subst $(SRCFLD),$(BUILD),$(subst .c,.o,$(1)))
-out_from_obj	=	$(subst .o,.out,$(1))
+obj_from_src = $(subst $(SRCFLD),$(BUILD),$(subst .c,.o,$(1)))
+out_from_obj = $(subst .o,.out,$(1))
 
 #rule generation
 define comp_o	= 
@@ -103,12 +103,12 @@ define comp_out	=
 source	:= $(1)
 target	:= $(2)
 objs	:= $(3)
-$$(target)	: $$(source) $$(objs)
+$$(target) : $$(source) $$(objs)
 	@mkdir -p $$(dir $$@)
 	$(CC) $$(CFLAGS) $$^ -o $$@ $$(CFLAGS_END)
 endef
 
-define make_obj_rules	=
+define make_obj_rules =
 $(foreach i,$(1),$(eval $(call comp_o,$(i),$(call obj_from_src,$(i)),$(wildcard $(SRCFLD)/*.h))))
 endef
 
@@ -116,7 +116,7 @@ $(call make_obj_rules,$(SRC_FILE))
 $(call make_obj_rules,$(SRC_TEST))
 $(call make_obj_rules,$(SRC_EXEC))
 
-define make_out_rules	=
+define make_out_rules =
 $(foreach i,$(1),$(eval $(call comp_out,$(i),$(call out_from_obj,$(i)),$(OBJ_FILE))))
 endef
 
