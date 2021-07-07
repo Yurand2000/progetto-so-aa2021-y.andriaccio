@@ -13,6 +13,7 @@
 #define WORKER_IDLE 0
 #define WORKER_DO 1
 #define WORKER_DONE 2
+#define WORKER_DEAD 3
 
 typedef struct worker_data {
 	//mux shared between main and given thread

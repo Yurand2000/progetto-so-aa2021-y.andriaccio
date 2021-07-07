@@ -18,7 +18,19 @@
 #include "message_type.h"
 #include "net_msg_macros.h"
 
-#define THREAD_ERRCHECK(cond) if(cond == -1) { perror("Thread failure"); return (void*)0; };
+#define THREAD_ERRCHECK(cond) if(cond == -1) {\
+	perror("Thread failure");\
+	return (void*)0;\
+};
+
+#define THREAD_ERRCHECK_ADV(cond) if(cond == -1) {\
+	THREAD_ERRCHECK(pthread_mutex_lock(&data->thread_mux));\
+    data->do_work = WORKER_DEAD;\
+	THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));\
+	THREAD_ERRCHECK(pthread_kill(data->shared->ro_main_thread, SIGUSR1));\
+	perror("Thread failure [2]");\
+	return (void*)0;\
+};
 
 int init_worker_data(worker_data* wd, int thread_id, file_t* files, size_t file_num,
 	log_t* log, shared_state* shared)
@@ -73,10 +85,10 @@ void* worker_routine(void* args)
 			int conn = data->in_conn; int newconn = -1;
 			THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));
 
-			THREAD_ERRCHECK(worker_do(data->thread_id, &conn, &newconn, data->files,
+			THREAD_ERRCHECK_ADV(worker_do(data->thread_id, &conn, &newconn, data->files,
 				data->file_num, data->log, data->shared));
 			worker_did++;
-
+			
 			THREAD_ERRCHECK(pthread_mutex_lock(&data->thread_mux));
 			data->in_conn = conn;
 			data->add_conn = newconn;
