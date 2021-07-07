@@ -38,45 +38,56 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 		ERRCHECKDO(evict_LRU(log, thread, nodel_file, files, file_num, state,
 			&buf, &buf_size, &name, &name_size), { free(buf); free(name); });
 		break;
+	default:
 	case ALGO_FIFO:
 		ERRCHECKDO(evict_FIFO(log, thread, nodel_file, files, file_num, state,
 			&buf, &buf_size, &name, &name_size), { free(buf); free(name); });
-	default:
 		break;
 	}
 
-	ERRCHECKDO(convert_slashes_to_underscores(name), { free(buf); free(name); });
-	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * buf_size, buf), { free(buf); free(name); });
-	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &buf_size), { free(buf); free(name); });
-	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * name_size, name), { free(buf); free(name); });
-	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &name_size), { free(buf); free(name); });
+	if (name != NULL && buf != NULL)
+	{
+		ERRCHECKDO(convert_slashes_to_underscores(name), { free(buf); free(name); });
+		ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * buf_size, buf), { free(buf); free(name); });
+		ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &buf_size), { free(buf); free(name); });
+		ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * name_size, name), { free(buf); free(name); });
+		ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &name_size), { free(buf); free(name); });
 
-	free(buf);
-	free(name);
+		free(buf);
+		free(name);
 
-	ERRCHECK(pthread_mutex_lock(&state->state_mux));
-	state->cache_miss_execs++;
-	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-	return 0;
+		ERRCHECK(pthread_mutex_lock(&state->state_mux));
+		state->cache_miss_execs++;
+		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+		return 0;
+	}
+	else ERRSET(ECANCELED, -1);
 }
 
 int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state* state,
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
-	size_t storage;
+	size_t storage; int err;
 	ERRCHECK(get_size(&files[file], &storage));
 
 	ERRCHECK(force_open_file(&files[file]));
-	ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
-	ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
-	ERRCHECK(force_remove_file(&files[file]));
+	err = force_read_file(&files[file], buf, buf_size, buf_size);
+	if (err == -1 && errno != EPERM) return -1;
+	else
+	{
+		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
+		ERRCHECK(force_remove_file(&files[file]));
 
-	ERRCHECK(pthread_mutex_lock(&state->state_mux));
-	state->current_storage -= storage;
-	state->current_files--;
-	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+		ERRCHECK(pthread_mutex_lock(&state->state_mux));
+		state->current_storage -= storage;
+		state->current_files--;
+		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+	}
 
-	do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
+	if(name != NULL)
+		do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
+	else
+		do_log(log, thread, 0, "none", STRING_CACHE_MISS, "Success.", 0, 0);
 	return 0;
 }
 
@@ -99,11 +110,8 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 	});
 
 	if (selected)
-	{
 		ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
-		return 0;
-	}
-	else ERRSET(ECANCELED, -1);
+	return 0;
 }
 
 int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
@@ -126,11 +134,8 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 	});
 
 	if (selected)
-	{
 		ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
-		return 0;
-	}
-	else ERRSET(ECANCELED, -1);
+	return 0;
 }
 
 int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
@@ -151,6 +156,7 @@ int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 		}
 	});
 
-	if(selected) ERRCHECK(delete_evicted(log, thread, curr_least_used, files, state, buf, buf_size, name, name_size));
+	if(selected)
+		ERRCHECK(delete_evicted(log, thread, curr_least_used, files, state, buf, buf_size, name, name_size));
 	return 0;
 }

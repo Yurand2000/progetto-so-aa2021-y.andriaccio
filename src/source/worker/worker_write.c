@@ -189,12 +189,14 @@ static int do_cache_miss(log_t* log, int thread_id, char* name, file_t* files, s
 
 	while (curr_storage + buf_size > state->ro_max_storage)
 	{
-		cache_miss(log, thread_id, name, files, file_num, state, out_msg);
+		int err = cache_miss(log, thread_id, name, files, file_num, state, out_msg);
+		if (err == 0)
+			count++;
+		else if (err == -1 && errno != ECANCELED) return -1;
 
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
 		curr_storage = state->current_storage;
 		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-		count++;
 	}
 
 	if (count > 0)
