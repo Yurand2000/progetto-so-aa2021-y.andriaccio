@@ -8,6 +8,10 @@
 #define LOCK(file) ERRCHECK(pthread_mutex_lock(&file->mutex))
 #define UNLOCK(file) ERRCHECK(pthread_mutex_unlock(&file->mutex))
 
+#define CHECK_EXISTENCE(file) {\
+	if (file->owner == OWNER_NEXIST) ERRSETDO(ENOENT, UNLOCK(file), -1);\
+}
+
 #define CHECK_OPEN_FILE(file) {\
 	int opn = is_open_file_nolock(file);\
 	if (opn == -1) { UNLOCK(file); return -1; }\
@@ -72,6 +76,7 @@ int create_file_struct(file_t* file, char const* filename, int owner)
 {
 	if(file == NULL || filename == NULL || owner <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	file->owner = owner;
 	file->fifo_creation_time = time(NULL);
 	file->lru_clock = 1;
@@ -96,6 +101,7 @@ int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* 
 {
 	if (file == NULL || out_data == NULL || out_data_size == NULL || read_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	size_t name_len = strlen(file->name) + 1;
 	if (*out_data_size < name_len)
 	{
@@ -114,6 +120,7 @@ int check_file_name(file_t* file, char const* name)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	int cmp = strcmp(file->name, name);
 	UNLOCK(file);
 
@@ -143,6 +150,7 @@ int is_locked_file(file_t* file, int who)
 {
 	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	int owner = file->owner;
 	UNLOCK(file);
 
@@ -154,6 +162,7 @@ int get_size(file_t* file, size_t* data_size)
 {
 	if (file == NULL || data_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	*data_size = file->data_size + file->new_size;
 	UNLOCK(file);
 	return 0;
@@ -163,6 +172,7 @@ int get_usage_data(file_t* file, time_t* fifo, int* lfu, char* lru)
 {
 	if (file == NULL || (fifo == NULL && lfu == NULL && lru == NULL)) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (fifo != NULL) *fifo = file->fifo_creation_time;
 	if (lfu != NULL) *lfu = file->lfu_frequency;
 	if (lru != NULL) *lru = file->lru_clock;
@@ -174,6 +184,7 @@ int update_lru(file_t* file, char newval)
 {
 	if (file == NULL || newval > 1 || newval < 0) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	file->lru_clock = newval;
 	UNLOCK(file);
 	return 0;
@@ -184,6 +195,7 @@ int open_file(file_t* file, int who)
 	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 
@@ -215,6 +227,7 @@ int close_file(file_t* file, int who, long* difference)
 	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	int open = is_open_file_nolock(file);
@@ -224,7 +237,7 @@ int close_file(file_t* file, int who, long* difference)
 		//compress the file open_data into the data pointer.
 		if (file->open_size > 0)
 		{
-			size_t old_size = file->data_size + file->open_size;
+			size_t old_size = file->data_size + file->new_size;
 
 			//compression not implemented yet.
 			file->data_size = file->open_size;
@@ -254,6 +267,7 @@ int read_file(file_t* file, int who, void** out_data, size_t* out_data_size, siz
 		|| read_size == NULL) ERRSET(EINVAL, -1);
 
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
@@ -277,6 +291,7 @@ int force_open_file(file_t* file)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 
@@ -289,6 +304,7 @@ int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t
 	if (file == NULL || out_data == NULL || out_data_size == NULL
 		|| read_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 
@@ -302,6 +318,7 @@ int write_file(file_t* file, int who, const void* data, size_t data_size)
 		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
@@ -323,6 +340,7 @@ int append_file(file_t* file, int who, const void* data, size_t data_size)
 		data == NULL || data_size == 0) ERRSET(EINVAL, -1);
 
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
@@ -345,6 +363,7 @@ int lock_file(file_t* file, int who)
 {
 	if(file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
@@ -360,6 +379,7 @@ int unlock_file(file_t* file, int who)
 {
 	if(file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
@@ -375,6 +395,7 @@ int remove_file(file_t* file, int who, size_t* data_size)
 {
 	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	if (file->owner == OWNER_NULL || file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	*data_size = file->data_size + file->new_size;
@@ -387,6 +408,7 @@ int force_remove_file(file_t* file, size_t* data_size)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
+	CHECK_EXISTENCE(file);
 	file->owner = OWNER_ADMIN;
 	UNLOCK(file);
 

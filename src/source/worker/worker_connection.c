@@ -80,7 +80,7 @@ int do_close_connection(int thread_id, int* conn, net_msg* in_msg, net_msg* out_
 	{
 		if (is_locked_file(&files[i], *conn) == 0)
 		{
-			long diff;
+			long diff = 0;
 			close_file(&files[i], *conn, &diff);
 
 			ERRCHECK(pthread_mutex_lock(&state->state_mux));

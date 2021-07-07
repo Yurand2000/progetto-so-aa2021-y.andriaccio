@@ -74,9 +74,19 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 			int res = create_file_struct(&files[nof], name, owner);
 			if (res == -1)
 			{
-				//file error!
-				do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File error.", 0, 0);
-				return -1;
+				if (errno != EEXIST)
+				{
+					//file error!
+					do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File error.", 0, 0);
+					return -1;
+				}
+				else
+				{
+					//file already exists;
+					out_msg->type |= MESSAGE_FILE_EXISTS;
+
+					do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File already exists.", 0, 0);
+				}
 			}
 			else
 			{
@@ -137,6 +147,11 @@ static int _open_file_open(int thread_id, int fslot, char* name, int* conn, net_
 			else
 				do_log(log, thread_id, *conn, name, STRING_OPENLOCK_FILE, "Success.", 0, 0);
 		}
+		else if (errno == ENOENT)
+		{
+			out_msg->type |= MESSAGE_FILE_NEXISTS;
+			do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File doesn't exist.", 0, 0);
+		}
 		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
@@ -154,7 +169,6 @@ static int _open_file_open(int thread_id, int fslot, char* name, int* conn, net_
 	{
 		//file doesn't exist
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
-
 		do_log(log, thread_id, *conn, name, STRING_OPEN_FILE, "File doesn't exist.", 0, 0);
 	}
 	return 0;

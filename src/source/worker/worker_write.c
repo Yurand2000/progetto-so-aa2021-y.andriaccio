@@ -46,7 +46,6 @@ int do_write_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 		else if (file == -1)
 		{
 			out_msg->type |= MESSAGE_FILE_NEXISTS;
-
 			do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File doesn't exist.", 0, 0);
 		}
 		else
@@ -72,6 +71,11 @@ int do_write_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 				{
 					out_msg->type |= MESSAGE_FILE_NOPEN;
 					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File is closed.", 0, 0);
+				}
+				else if (errno == ENOENT)
+				{
+					out_msg->type |= MESSAGE_FILE_NEXISTS;
+					do_log(log, thread_id, *conn, name, STRING_WRITE_FILE, "File doesn't exist.", 0, 0);
 				}
 				else if(errno == EEXIST)
 				{
@@ -155,7 +159,7 @@ int do_append_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 			else if (errno == ENOENT)
 			{
 				out_msg->type |= MESSAGE_FILE_NEXISTS;
-				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File was empty.", 0, 0);
+				do_log(log, thread_id, *conn, name, STRING_APPEND_FILE, "File was empty or didn't exist anymore.", 0, 0);
 			}
 			else if (errno == EAGAIN)
 			{

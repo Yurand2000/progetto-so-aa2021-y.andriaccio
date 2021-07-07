@@ -47,6 +47,11 @@ int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 
 				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "Success.", 0, 0);
 			}
+			else if (errno == ENOENT)
+			{
+				out_msg->type |= MESSAGE_FILE_NEXISTS;
+				do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File doesn't exist.", 0, 0);
+			}
 			else if (errno == EPERM)
 			{
 				out_msg->type |= MESSAGE_FILE_NOPEN;
@@ -69,7 +74,6 @@ int do_remove_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	else if (errno == ENOENT)
 	{
 		out_msg->type |= MESSAGE_FILE_NEXISTS;
-
 		do_log(log, thread_id, *conn, name, STRING_REMOVE_FILE, "File doesn't exist.", 0, 0);
 	}
 	else

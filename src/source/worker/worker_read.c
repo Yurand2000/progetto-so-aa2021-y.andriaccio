@@ -43,6 +43,11 @@ int do_read_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 
 			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "Success.", (int)read_size, 0);
 		}
+		else if (errno == ENOENT)
+		{
+			out_msg->type |= MESSAGE_FILE_NEXISTS;
+			do_log(log, thread_id, *conn, name, STRING_READ_FILE, "File doesn't exist.", 0, 0);
+		}
 		else if (errno == EAGAIN)
 		{
 			out_msg->type |= MESSAGE_FILE_NOWN;
@@ -117,7 +122,7 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 				ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_size), { free(buf); });
 				count++;
 			}
-			else if(error != EAGAIN && error != EPERM)
+			else if(error != EAGAIN && error != EPERM && error != ENOENT)
 			{
 				do_log(log, thread_id, *conn, "none", STRING_READN_FILE, "File error.", 0, 0);
 				free(buf);
