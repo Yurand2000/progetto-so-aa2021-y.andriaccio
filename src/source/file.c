@@ -12,6 +12,10 @@
 	if (file->owner == OWNER_NEXIST) ERRSETDO(ENOENT, UNLOCK(file), -1);\
 }
 
+#define CHECK_NON_EXISTENCE(file) {\
+	if (file->owner != OWNER_NEXIST) ERRSETDO(EEXIST, UNLOCK(file), -1);\
+}
+
 #define CHECK_OPEN_FILE(file) {\
 	int opn = is_open_file_nolock(file);\
 	if (opn == -1) { UNLOCK(file); return -1; }\
@@ -76,7 +80,7 @@ int create_file_struct(file_t* file, char const* filename, int owner)
 {
 	if(file == NULL || filename == NULL || owner <= OWNER_NEXIST) ERRSET(EINVAL, -1);
 	LOCK(file);
-	CHECK_EXISTENCE(file);
+	CHECK_NON_EXISTENCE(file);
 	file->owner = owner;
 	file->fifo_creation_time = time(NULL);
 	file->lru_clock = 1;

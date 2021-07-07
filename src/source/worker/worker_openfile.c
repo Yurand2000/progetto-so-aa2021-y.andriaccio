@@ -84,7 +84,6 @@ static int _open_file_create(int thread_id, int fslot, char* name, int* conn, ne
 				{
 					//file already exists;
 					out_msg->type |= MESSAGE_FILE_EXISTS;
-
 					do_log(log, thread_id, *conn, name, STRING_CREATE_FILE, "File already exists.", 0, 0);
 				}
 			}
