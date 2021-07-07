@@ -600,7 +600,7 @@ static int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_re
 			int insert = 0;
 			for (int j = i + 1; j < reqs_num; j++)
 			{
-				if(strcmp(reqs[j].stringdata, req->stringdata) == 0) insert = 1;
+				if(reqs[j].stringdata != NULL && strcmp(reqs[j].stringdata, req->stringdata) == 0) insert = 1;
 			}
 			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
