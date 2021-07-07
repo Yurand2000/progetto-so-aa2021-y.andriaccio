@@ -88,12 +88,13 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	int n, res, error; size_t count = 0;
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(int), &n));
 
-	size_t i = 0; long diff; int err;
+	size_t i = 0; long diff; int err, wasclosed;
 	void* buf = NULL; size_t buf_size = 0, read_size; int total_read = 0;
 	while (i < file_num && (n <= 0 || count < n))
 	{
 		if ((is_existing_file(&files[i]) == 0))
 		{
+			wasclosed = is_open_file(&files[i]);
 			err = open_file(&files[i], *conn);
 			if (err == -1)
 			{
@@ -104,14 +105,17 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 				res = read_file(&files[i], *conn, &buf, &buf_size, &read_size);
 				error = errno;
 
-				diff = 0;
-				err = close_file(&files[i], *conn, &diff);
-				if (err == -1 && errno != ENOENT && errno != EAGAIN) { free(buf); return -1; }
-				if (diff != 0)
+				if (wasclosed == 1)
 				{
-					ERRCHECK(pthread_mutex_lock(&state->state_mux));
-					state->current_storage -= diff;
-					ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+					diff = 0;
+					err = close_file(&files[i], *conn, &diff);
+					if (err == -1 && errno != ENOENT && errno != EAGAIN) { free(buf); return -1; }
+					if (diff != 0)
+					{
+						ERRCHECK(pthread_mutex_lock(&state->state_mux));
+						state->current_storage -= diff;
+						ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+					}
 				}
 
 				if (res == 0)

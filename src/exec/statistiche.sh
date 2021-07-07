@@ -1,96 +1,11 @@
 #!/bin/bash
 
 #First argument is the log file
-READ=0;READ_SIZE=0
-WRITE=0;WRITE_SIZE=0
+READ=0;READ_SIZE=0;
+WRITE=0;WRITE_SIZE=0;
 LOCK=0;UNLOCK=0;OPEN_LOCK=0;CLOSE=0;REMOVE=0;
 MAX_SIZE=0;MAX_FILES=0;MAX_CONN=0;CACHE_MISS=0;
 OP_THREAD[0]=0;
-
-print_state(){
-  local CURR=$(($1*100/$2))
-  local str="["
-  local count=30
-  local i=0
-  for ((;i < ($1*$count/$2); i++)); do
-    str+="#"
-  done
-  for ((;i < count; i++)); do
-    str+="."
-  done
-  str+="] "$CURR"% - line:"$1"\r"
-  echo -e -n $str
-}
-
-clear_state(){
-  printf "                                               \r"
-}
-
-increment_thread(){
-  if [ ${#OP_THREAD[@]} -lt $(($1+1)) ]; then
-    local CURR=${#OP_THREAD[@]}
-    for((i=0; i < $(($1 - $CURR)); i++)); do
-      OP_THREAD[$(($CURR + $i))]=0
-    done
-  fi
-  OP_THREAD[$1]=$((${OP_THREAD[$1]}+1))
-}
-
-parse_operation(){
-  if [ $(eval "echo \"$1\" | grep \"OpenLock\"") ]; then
-    ((OPEN_LOCK++))
-  elif [ $(eval "echo \"$1\" | grep \"Unlock\"") ]; then
-    ((UNLOCK++))
-  elif [ $(eval "echo \"$1\" | grep \"Lock\"") ]; then
-    ((LOCK++))
-  elif [ $(eval "echo \"$1\" | grep \"Close\"") ]; then
-    ((CLOSE++))
-  elif [ $(eval "echo \"$1\" | grep \"Remove\"") ]; then
-    ((REMOVE++))
-  fi
-}
-
-parse_line(){
-  #line format 1: [timestamp] Thread:$$$ Read:$$$ Write:$$$ Client-Op:[$$$-$$$] Outcome:$$$ File:$$$ 
-  #line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
-  local FIRST=$(eval "echo \"$1\" | cut - -f 2")
-  local TEMP=""
-  if [ "$FIRST" = "MAIN" ]; then
-    TEMP=$(eval "echo \"$1\" | cut - -f 3")
-    MAX_SIZE=$(eval "echo \"$TEMP\" | cut - -d : -f 2")
-    TEMP=$(eval "echo \"$1\" | cut - -f 4")
-    MAX_FILES=$(eval "echo \"$TEMP\" | cut - -d : -f 2")
-    TEMP=$(eval "echo \"$1\" | cut - -f 5")
-    MAX_CONN=$(eval "echo \"$TEMP\" | cut - -d : -f 2")
-    TEMP=$(eval "echo \"$1\" | cut - -f 6")
-    CACHE_MISS=$(eval "echo \"$TEMP\" | cut - -d : -f 2")
-  elif [ $(eval "echo \"$FIRST\" | grep \"Thread\"") ]; then
-    #Thread:$$$
-    TEMP=$(eval "echo \"$FIRST\" | cut - -d ':' -f 2")
-    increment_thread "$TEMP"
-    
-    #Client-Operation:[$$$-$$$]
-    TEMP=$(eval "echo \"$1\" | cut - -f 5")
-    TEMP=$(eval "echo \"$TEMP\" | cut - -d ':' -f 2")
-    parse_operation $TEMP
-    
-    #Read:$$$
-    TEMP=$(eval "echo \"$1\" | cut - -f 3")
-    TEMP=$(eval "echo \"$TEMP\" | cut - -d ':' -f 2")
-    if [ $TEMP -gt 0 ]; then
-      ((READ++))
-      READ_SIZE=$(($READ_SIZE + $TEMP))
-    fi
-    
-    #Write:$$$
-    TEMP=$(eval "echo \"$1\" | cut - -f 4")
-    TEMP=$(eval "echo \"$TEMP\" | cut - -d ':' -f 2")
-    if [ $TEMP -gt 0 ]; then
-      ((WRITE++))
-      WRITE_SIZE=$(($WRITE_SIZE + $TEMP))
-    fi
-  fi
-}
 
 print_data(){
   if [ $READ -ne 0 ]; then
@@ -126,24 +41,39 @@ print_data(){
 }
 
 print_exit(){
-  clear_state
-  printf "lines parsed: %s\n" $COUNT
   print_data
   exit 0
 }
 
 trap print_exit SIGINT
 
-LINES=$(eval "wc -l \"$1\"")
-COUNT=0
-print_state $COUNT $LINES 
-while read -r line; do
-  parse_line "$line"
-  ((COUNT++))
-  print_state $COUNT $LINES
-done < $1
+#line format 1: [timestamp] Thread:$$$ Read:$$$ Write:$$$ Client-Op:[$$$-$$$] Outcome:$$$ File:$$$
+for((i=0;i<50;i++)); do
+  CNT=$(eval "grep \"Thread:$i\" $1 | wc -l")
+  if [ $CNT -ne 0 ]; then
+    OP_THREAD[$i]=$CNT
+  fi
+done
 
-clear_state
+TEMP=$(eval "grep -o \"Read:[1-9][0-9]*\" $1 | cut - -d ':' -f 2")
+READ_SIZE=$(eval "echo -n \"$TEMP\" | paste -sd+ - | bc -q")
+READ=$(eval "echo -n \"$TEMP\" | wc -l")
+
+TEMP=$(eval "grep -o \"Write:[1-9][0-9]*\" $1 | cut - -d ':' -f 2")
+WRITE_SIZE=$(eval "echo -n \"$TEMP\" | paste -sd+ - | bc -q")
+WRITE=$(eval "echo -n \"$TEMP\" | wc -l")
+
+LOCK=$(eval "grep -o \"-Lock\" $1 | wc -l")
+OPEN_LOCK=$(eval "grep -o \"-OpenLock\" $1 | wc -l")
+UNLOCK=$(eval "grep -o \"-Unlock\" $1 | wc -l")
+CLOSE=$(eval "grep -o \"-Close\" $1 | wc -l")
+REMOVE=$(eval "grep -o \"-Remove\" $1 | wc -l")
+
+#line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
+MAX_SIZE=$(eval "grep -o \"MaxSize:[0-9]*\" $1 | cut - -d ':' -f 2")
+MAX_FILES=$(eval "grep -o \"MaxFiles:[0-9]*\" $1 | cut - -d ':' -f 2")
+MAX_CONN=$(eval "grep -o \"MaxConn:[0-9]*\" $1 | cut - -d ':' -f 2")
+CACHE_MISS=$(eval "grep -o \"CacheMiss:[0-9]*\" $1 | cut - -d ':' -f 2")
 
 print_data
 
