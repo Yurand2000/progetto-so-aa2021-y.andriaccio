@@ -220,6 +220,8 @@ int main(int argc, char* argv[])
 				else perror("Write to file failure");
 			}
 			free(buf);
+			buf = NULL;
+			size = 0;
 			break;
 		case REQUEST_READN:
 			res = readNFiles(reqs[i].n, reqs[i].dir);
