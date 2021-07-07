@@ -18,7 +18,8 @@ for (size_t i = 0; i < file_num; i++)\
 		ERRCHECK( (res = check_file_name(&files[i], nodel_file)) );\
 		if (res != 0)\
 		{\
-			todo;\
+			if((files[i].data_size + files[i].open_size) > 0)\
+				todo;\
 		}\
 	}\
 }\
@@ -43,6 +44,9 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 	default:
 		break;
 	}
+
+	PTRCHECKDO(buf, { free(name); });
+	PTRCHECKDO(name, { free(buf); });
 	ERRCHECKDO(convert_slashes_to_underscores(name), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * buf_size, buf), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &buf_size), { free(buf); free(name); });
