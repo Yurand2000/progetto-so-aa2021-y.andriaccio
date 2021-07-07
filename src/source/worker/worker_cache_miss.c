@@ -45,8 +45,6 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 		break;
 	}
 
-	PTRCHECKDO(buf, { free(name); });
-	PTRCHECKDO(name, { free(buf); });
 	ERRCHECKDO(convert_slashes_to_underscores(name), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * buf_size, buf), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &buf_size), { free(buf); free(name); });
@@ -100,8 +98,12 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 		}
 	});
 
-	if(selected) ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
-	return 0;
+	if (selected)
+	{
+		ERRCHECK(delete_evicted(log, thread, curr_older, files, state, buf, buf_size, name, name_size));
+		return 0;
+	}
+	else ERRSET(ECANCELED, -1);
 }
 
 int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
@@ -123,8 +125,12 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 		}
 	});
 
-	if (selected) ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
-	return 0;
+	if (selected)
+	{
+		ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
+		return 0;
+	}
+	else ERRSET(ECANCELED, -1);
 }
 
 int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
