@@ -6,7 +6,7 @@ TESTDIR=src/tests/test3
 rm -r $TESTDIR/ret > /dev/null 2> /dev/null
 mkdir $TESTDIR/ret > /dev/null 2> /dev/null
 
-sleep 5
+sleep 2
 
 MAX_CLIENTS=11
 for((i = 0; i < $MAX_CLIENTS; i++)); do
@@ -14,10 +14,10 @@ for((i = 0; i < $MAX_CLIENTS; i++)); do
 	CLIENTS[$i]=$!
 done
 
-sleep 5
+sleep 30
 
 for((i = 0; i < $MAX_CLIENTS; i++)); do
-	kill ${CLIENTS[$i]}
+	kill -s SIGUSR1 ${CLIENTS[$i]} > /dev/null 2> /dev/null
 done
 
 exit 0

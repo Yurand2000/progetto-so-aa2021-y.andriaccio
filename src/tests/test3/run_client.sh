@@ -3,27 +3,46 @@
 CLIENT=./build/exec/client.out
 SOCKFILE=./socket.sk
 TESTDIR=src/tests/test3
-CLIENT_OPT=" -f $SOCKFILE -t 0 -p "
+CLIENT_OPT=" -f $SOCKFILE -t 0"
 
-OPS[0]="-W $TESTDIR/files/file_0.txt -r $TESTDIR/files/file_1.txt -d $TESTDIR/ret -l $TESTDIR/files/file_2.txt,$TESTDIR/files/file_3.txt -c $TESTDIR/files/file_2.txt,$TESTDIR/files/file_3.txt"
-OPS[1]="-W $TESTDIR/files/file_1.txt -r $TESTDIR/files/file_2.txt -d $TESTDIR/ret -l $TESTDIR/files/file_3.txt,$TESTDIR/files/file_4.txt -c $TESTDIR/files/file_3.txt,$TESTDIR/files/file_4.txt"
-OPS[2]="-W $TESTDIR/files/file_2.txt -r $TESTDIR/files/file_3.txt -d $TESTDIR/ret -l $TESTDIR/files/file_4.txt,$TESTDIR/files/file_0.txt -c $TESTDIR/files/file_4.txt,$TESTDIR/files/file_0.txt"
-OPS[3]="-W $TESTDIR/files/file_3.txt -r $TESTDIR/files/file_4.txt -d $TESTDIR/ret -l $TESTDIR/files/file_0.txt,$TESTDIR/files/file_1.txt -c $TESTDIR/files/file_0.txt,$TESTDIR/files/file_1.txt"
-OPS[4]="-W $TESTDIR/files/file_4.txt -r $TESTDIR/files/file_0.txt -d $TESTDIR/ret -l $TESTDIR/files/file_1.txt,$TESTDIR/files/file_2.txt -c $TESTDIR/files/file_1.txt,$TESTDIR/files/file_2.txt"
-OPS[5]="-w $TESTDIR/files -Rn=5 -d $TESTDIR/ret -l $TESTDIR/files/file3.txt -a $TESTDIR/files/file3.txt -u $TESTDIR/files/file3.txt"
+function rand_file(){
+  echo -n "$TESTDIR/files/file_$(($RANDOM%200)).txt"
+}
+
+function rand_op(){
+  OPT=$(($RANDOM%20))
+  if [ $OPT -eq 0 ]; then
+    echo -n "-Rn=$(($RANDOM%10)) -d $TESTDIR/ret"
+  else
+    echo -n "${OPS[$(($RANDOM%$OP_SIZE))]} $(rand_file)"
+  fi
+}
+
+OPS[0]="-W"
+OPS[1]="-l"
+OPS[2]="-r"
+OPS[3]="-c"
+OPS[4]="-a"
+OPS[5]="-u"
 OP_SIZE=${#OPS[@]}
 
-RUN=$CLIENT
-RUN+=$CLIENT_OPT
-for((;;)) do
-  TEMP=$RUN
+RUN=$CLIENT$CLIENT_OPT
+function on_sigint(){
+  exit 0
+}
+trap on_sigint SIGINT
+trap on_sigint SIGUSR1
+
+while true; do
   RAND=$(od -vAn -N4 -t u4 < /dev/urandom)
   RAND=$(($RAND % $OP_SIZE))
-  TEMP+=${OPS[$RAND]}
-  eval "$TEMP"
+
+  #eval "$RUN $(rand_op) $(rand_op) $(rand_op) $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
+  CALL="$RUN $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
+  eval "$CALL"
   RET=$?
   if [ $RET -ne 0 ] ; then
-    echo "Client returned an error: " $TEMP " " $RET
+    echo "Client returned an error: "$RET" - "$CALL
     break
   fi
 done
