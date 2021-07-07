@@ -30,13 +30,16 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 	switch (state->ro_cache_miss_algorithm)
 	{
 	case ALGO_LFU:
-		evict_LFU(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		ERRCHECKDO(evict_LFU(log, thread, nodel_file, files, file_num, state,
+			&buf, &buf_size, &name, &name_size), { free(buf); free(name); });
 		break;
 	case ALGO_LRU:
-		evict_LRU(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		ERRCHECKDO(evict_LRU(log, thread, nodel_file, files, file_num, state,
+			&buf, &buf_size, &name, &name_size), { free(buf); free(name); });
 		break;
 	case ALGO_FIFO:
-		evict_FIFO(log, thread, nodel_file, files, file_num, state, &buf, &buf_size, &name, &name_size);
+		ERRCHECKDO(evict_FIFO(log, thread, nodel_file, files, file_num, state,
+			&buf, &buf_size, &name, &name_size), { free(buf); free(name); });
 	default:
 		break;
 	}
@@ -46,12 +49,12 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * name_size, name), { free(buf); free(name); });
 	ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &name_size), { free(buf); free(name); });
 
+	free(buf);
+	free(name);
+
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
 	state->cache_miss_execs++;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-
-	free(buf);
-	free(name);
 	return 0;
 }
 
