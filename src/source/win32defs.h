@@ -41,6 +41,13 @@ int pthread_cond_signal(pthread_cond_t* cond);
 int pthread_create(pthread_t *th, const pthread_attr_t *attr, void *(*routine)(void*), void *args);
 int pthread_join(pthread_t, void **);
 
+#define PTHREAD_MUTEX_ERRORCHECK 1
+
+typedef int pthread_mutexattr_t;
+int pthread_mutexattr_init(pthread_mutexattr_t *);
+int pthread_mutexattr_destroy(pthread_mutexattr_t *);
+int pthread_mutexattr_settype(pthread_mutexattr_t *, int);
+
 //socket defines
 #define AF_UNIX 0
 #define SOCK_STREAM 0

@@ -18,7 +18,12 @@ int init_file_struct(file_t* file)
 {
 	if(file == NULL) ERRSET(EINVAL, -1);
 	file->owner = OWNER_NEXIST;
-	ERRCHECK(pthread_mutex_init(&file->mutex, NULL));
+
+	pthread_mutexattr_t attr;
+	ERRCHECK(pthread_mutexattr_init(&attr));
+	ERRCHECK(pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK));
+	ERRCHECK(pthread_mutex_init(&file->mutex, &attr));
+	ERRCHECK(pthread_mutexattr_destroy(&attr));
 	file->name[0] = '\0';
 	file->data_size = 0;
 	file->open_size = -1;
@@ -300,7 +305,7 @@ int write_file(file_t* file, int who, const void* data, size_t data_size)
 	if (file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
-	if(file->open_size != 0) ERRSET(EEXIST, -1);
+	if(file->open_size != 0) ERRSETDO(EEXIST, UNLOCK(file), -1);
 
 	MALLOCDO(file->open_data, data_size, UNLOCK(file));
 	file->open_size = data_size;
