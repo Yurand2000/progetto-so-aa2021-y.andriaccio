@@ -68,7 +68,11 @@ int after_poll_signal(struct pollfd* poll_array, nfds_t poll_size, pthread_t* th
 	{
 		//close acceptor connection and signal handler
 		ERRCHECK(close(poll_array[poll_size - 1].fd));
-		ERRCHECK(close(poll_array[poll_size - 2].fd));
+
+		ERRCHECK(pthread_mutex_lock(&state->state_mux));
+		ERRCHECK(close(acceptor));
+		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+		poll_array[poll_size - 2].fd = -1;
 
 		ERRCHECK(stop_all_threads(threads_data, threads_count));
 		ERRCHECK(join_all_threads(threads, threads_count));
