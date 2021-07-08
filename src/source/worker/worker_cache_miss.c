@@ -81,17 +81,16 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
 		ERRCHECK(force_remove_file(&files[file], &storage));
 
+		do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
+
 		ERRCHECK(pthread_mutex_lock(&state->state_mux));
 		state->current_storage -= storage;
 		state->current_files--;
 		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 	}
-	else if (errno != ENOENT) return -1;\
+	else if (errno != ENOENT && errno != EAGAIN) return -1;\
+	else do_log(log, thread, 0, "none", STRING_CACHE_MISS, "Skipped.", 0, 0);
 
-	if(*name != NULL)
-		do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
-	else
-		do_log(log, thread, 0, "none", STRING_CACHE_MISS, "Skipped.", 0, 0);
 	return 0;
 }
 

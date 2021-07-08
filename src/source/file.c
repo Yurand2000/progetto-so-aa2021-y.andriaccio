@@ -296,7 +296,9 @@ int force_open_file(file_t* file)
 	if (file == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
 	CHECK_EXISTENCE(file);
-	file->owner = OWNER_ADMIN;
+	if(file->owner != OWNER_ADMIN)
+		file->owner = OWNER_ADMIN;
+	else ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	UNLOCK(file);
 
 	ERRCHECK(open_file(file, OWNER_ADMIN));
