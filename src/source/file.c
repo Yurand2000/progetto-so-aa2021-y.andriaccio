@@ -39,7 +39,6 @@ int init_file_struct(file_t* file)
 	file->new_size = 0;
 	file->data = NULL;
 	file->open_data = NULL;
-	file->compressed = 0;
 
 	file->fifo_creation_time = 0;
 	file->lfu_frequency = 0;
@@ -71,7 +70,6 @@ int reset_file_struct(file_t* file)
 	file->new_size = 0;
 	file->data = NULL;
 	file->open_data = NULL;
-	file->compressed = 0;
 
 	file->fifo_creation_time = 0;
 	file->lfu_frequency = 0;
