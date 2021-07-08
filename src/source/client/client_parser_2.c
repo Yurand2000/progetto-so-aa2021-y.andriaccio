@@ -20,7 +20,7 @@ int expand_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
 	char currdir[], size_t currdir_size)
 {
 	req_t* reqs_exp = NULL; size_t curr_reqs_exp = 0, reqs_size_exp = 0;
-	for (size_t i = 0; i < curr_reqs; i++)
+	for (size_t i = 0; i < *curr_reqs; i++)
 	{
 		req_t* curr = &(*reqs)[i];
 		if (curr->type == REQUEST_WRITE_DIR)
