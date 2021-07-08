@@ -38,7 +38,7 @@ int compression_destroy()
 
 int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 {
-	int ret; ERRCHECK(ret = check_param(in, in_size, out, out_size));
+	int ret; ERRCHECK((ret = check_param(in, in_size, out, out_size)));
 	if (ret == 1) return 0;
 
 	if (compress)
@@ -75,7 +75,7 @@ int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 
 int decompress_data(void* in, size_t in_size, void** out, size_t* out_size)
 {
-	int ret; ERRCHECK(ret = check_param(in, in_size, out, out_size));
+	int ret; ERRCHECK((ret = check_param(in, in_size, out, out_size)));
 	if (ret == 1) return 0;
 
 	if (compress)

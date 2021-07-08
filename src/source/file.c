@@ -212,8 +212,10 @@ int open_file(file_t* file, int who)
 			file->open_size = 0;
 		else
 		{
+			size_t open_size;
 			ERRCHECKDO(decompress_data(file->data, file->data_size,
-				&file->open_data, &file->open_size), UNLOCK(file));
+				&file->open_data, &open_size), UNLOCK(file));
+			file->open_size = open_size;
 		}
 	}
 
@@ -241,7 +243,7 @@ int close_file(file_t* file, int who, long* difference)
 		{
 			size_t old_size = file->data_size + file->new_size;
 
-			ERRCHECKDO(compress_data(file->open_data, file->open_size,
+			ERRCHECKDO(compress_data(file->open_data, (size_t)file->open_size,
 				&file->data, &file->data_size), UNLOCK(file));
 
 			*difference = (old_size - file->data_size);
