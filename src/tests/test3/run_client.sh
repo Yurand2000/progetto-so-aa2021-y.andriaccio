@@ -37,8 +37,7 @@ while true; do
   RAND=$(od -vAn -N4 -t u4 < /dev/urandom)
   RAND=$(($RAND % $OP_SIZE))
 
-  #eval "$RUN $(rand_op) $(rand_op) $(rand_op) $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
-  CALL="$RUN $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
+  CALL="$RUN $(rand_op) $(rand_op) $(rand_op) $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
   eval "$CALL"
   RET=$?
   if [ $RET -ne 0 ] ; then

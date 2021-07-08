@@ -13,14 +13,14 @@ print_data(){
   else
     READ_SIZE_MED=0.00
   fi
-  printf "N. Read: %s; Dimensione media: %s\n" $READ $READ_SIZE_MED
+  printf "N. Read: %s; Dimensione media: %s bytes\n" $READ $READ_SIZE_MED
 
   if [ $WRITE -ne 0 ]; then
     WRITE_SIZE_MED=$(eval "echo \"scale=2; $WRITE_SIZE / $WRITE\" | bc -lq")
   else
     WRITE_SIZE_MED=0.00
   fi
-  printf "N. Write: %s; Dimensione media: %s\n" $WRITE $WRITE_SIZE_MED
+  printf "N. Write: %s; Dimensione media: %s bytes\n" $WRITE $WRITE_SIZE_MED
 
   printf "N. Lock: %s; N. OpenLock: %s\n" $LOCK $OPEN_LOCK
 
@@ -48,8 +48,9 @@ print_exit(){
 trap print_exit SIGINT
 
 #line format 1: [timestamp] Thread:$$$ Read:$$$ Write:$$$ Client-Op:[$$$-$$$] Outcome:$$$ File:$$$
-for((i=0;i<50;i++)); do
-  CNT=$(eval "grep \"Thread:$i\" $1 | wc -l")
+TH_MAX=50
+for((i=0;i<$TH_MAX;i++)); do
+  CNT=$(eval "grep -o \"Thread:$i\" $1 | wc -l")
   if [ $CNT -ne 0 ]; then
     OP_THREAD[$i]=$CNT
   fi
@@ -63,11 +64,11 @@ TEMP=$(eval "grep -o \"Write:[1-9][0-9]*\" $1 | cut - -d ':' -f 2")
 WRITE_SIZE=$(eval "echo -n \"$TEMP\" | paste -sd+ - | bc -q")
 WRITE=$(eval "echo -n \"$TEMP\" | wc -l")
 
-LOCK=$(eval "grep -o \"-Lock\" $1 | wc -l")
-OPEN_LOCK=$(eval "grep -o \"-OpenLock\" $1 | wc -l")
-UNLOCK=$(eval "grep -o \"-Unlock\" $1 | wc -l")
-CLOSE=$(eval "grep -o \"-Close\" $1 | wc -l")
-REMOVE=$(eval "grep -o \"-Remove\" $1 | wc -l")
+LOCK=$(eval "grep -o \"\-Lock\" $1 | wc -l")
+OPEN_LOCK=$(eval "grep -o \"\-OpenLock\" $1 | wc -l")
+UNLOCK=$(eval "grep -o \"\-Unlock\" $1 | wc -l")
+CLOSE=$(eval "grep -o \"\-Close\" $1 | wc -l")
+REMOVE=$(eval "grep -o \"\-Remove\" $1 | wc -l")
 
 #line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
 MAX_SIZE=$(eval "grep -o \"MaxSize:[0-9]*\" $1 | cut - -d ':' -f 2")
