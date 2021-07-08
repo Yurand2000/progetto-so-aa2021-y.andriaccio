@@ -26,6 +26,9 @@ int add_open_create_requests(req_t** out_reqs, size_t* out_curr_reqs, size_t* ou
 //-p option printer
 void print_operation_result(const char* op_type, const char* file, int res);
 
+int open_connection(char* socket_name, int time_between_reqs);
+int send_requests(req_t* reqs, size_t curr_reqs, int time_between_reqs, int do_print);
+
 void print_help();
 int get_cwd(char currdir[], size_t* currdir_size);
 int check_socket_file(char* socket_name);

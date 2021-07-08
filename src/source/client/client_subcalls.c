@@ -93,3 +93,127 @@ int check_socket_file(char* socket_name)
 	}
 	return 0;
 }
+
+#define DO_PRINT(op, file, res) if (do_print) print_operation_result(op, file, res);
+
+int open_connection(char* socket_name, int time_between_reqs)
+{
+	struct timespec abstime; abstime.tv_sec = 5; abstime.tv_nsec = 0; int res = 0;
+	if (time_between_reqs > 100)
+		res = openConnection(socket_name, time_between_reqs, abstime);
+	else
+		res = openConnection(socket_name, 500, abstime);
+	return res;
+}
+
+static void data_to_file(void* buf, size_t size, req_t* req)
+{
+	FILE* fd;
+	if (req->dir != NULL)
+	{
+		//create file and write buf data
+		size_t dirlen = strlen(req->dir);
+		ERRCHECK(convert_slashes_to_underscores(req->stringdata));
+		size_t len = strlen(req->stringdata) + 1;
+		char* file = malloc(len + dirlen);
+		if (file != NULL)
+		{
+			strncpy(file, req->dir, dirlen);
+			strncpy(file + dirlen, req->stringdata, len);
+			fd = fopen(file, "wb");
+			if (fd != NULL)
+			{
+				fwrite(buf, sizeof(char), size, fd);
+				fclose(fd);
+			}
+			else perror("Write to file failure");
+			free(file);
+		}
+		else perror("Write to file failure");
+	}
+}
+
+static void calc_timestamp(char* timestamp, size_t timestamp_size)
+{
+	time_t currtime; struct tm time_print;
+	time(&currtime);
+	localtime_r(&currtime, &time_print);
+
+	snprintf(timestamp, timestamp_size, "[%04d/%02d/%02d-%02d:%02d:%02d]\n",
+		(time_print.tm_year + 1900), (time_print.tm_mon + 1), time_print.tm_mday,
+		time_print.tm_hour, time_print.tm_min, time_print.tm_sec);
+}
+
+int send_requests(req_t* reqs, size_t curr_reqs, int time_between_reqs, int do_print)
+{
+	int res; struct timespec waittime;
+	char timestamp[23]; long nsec;
+	void* buf = NULL; size_t size = 0;
+
+	nsec = (long)time_between_reqs * 1000000L;	
+	waittime.tv_sec = nsec / 1000000000L;
+	waittime.tv_nsec = nsec % 1000000000L;
+	
+	for (size_t i = 0; i < curr_reqs; i++)
+	{
+		//wait
+		nanosleep(&waittime, NULL);
+
+		switch (reqs[i].type)
+		{
+		case REQUEST_OPEN:
+			res = openFile(reqs[i].stringdata, 0);
+			DO_PRINT("Open File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_OPEN_LOCK:
+			res = openFile(reqs[i].stringdata, O_LOCK);
+			DO_PRINT("Open Lock File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_CREATE_LOCK:
+			res = openFile(reqs[i].stringdata, O_CREATE | O_LOCK);
+			DO_PRINT("Create and Lock File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_CLOSE:
+			res = closeFile(reqs[i].stringdata);
+			DO_PRINT("Close File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_READ:
+			res = readFile(reqs[i].stringdata, &buf, &size);
+			DO_PRINT("Read File", reqs[i].stringdata, res);
+			if (res != -1) data_to_file(buf, size, &reqs[i]);
+			free(buf); buf = NULL; size = 0;
+			break;
+		case REQUEST_READN:
+			res = readNFiles(reqs[i].n, reqs[i].dir);
+			DO_PRINT("Read N Files", reqs[i].stringdata, res);
+			break;
+		case REQUEST_WRITE:
+			res = writeFile(reqs[i].stringdata, reqs[i].dir);
+			DO_PRINT("Write File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_APPEND:
+			calc_timestamp(timestamp, sizeof(timestamp));
+			res = appendToFile(reqs[i].stringdata, timestamp, sizeof(timestamp), reqs[i].dir);
+			DO_PRINT("Append to File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_LOCK:
+			res = lockFile(reqs[i].stringdata);
+			DO_PRINT("Lock File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_UNLOCK:
+			res = unlockFile(reqs[i].stringdata);
+			DO_PRINT("Unlock File", reqs[i].stringdata, res);
+			break;
+		case REQUEST_REMOVE:
+			res = removeFile(reqs[i].stringdata);
+			DO_PRINT("Remove File", reqs[i].stringdata, res);
+			break;
+		default:
+			break;
+		}
+	}
+	//wait
+	nanosleep(&waittime, NULL);
+
+	return 0;
+}
