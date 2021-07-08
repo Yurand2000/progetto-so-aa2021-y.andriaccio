@@ -8,6 +8,7 @@
 #include <time.h>
 
 #include "../client_api.h"
+#include "../source/worker/worker_generics.h"
 
 void print_help()
 {
@@ -113,7 +114,11 @@ static void data_to_file(void* buf, size_t size, req_t* req)
 	{
 		//create file and write buf data
 		size_t dirlen = strlen(req->dir);
-		ERRCHECK(convert_slashes_to_underscores(req->stringdata));
+		if (convert_slashes_to_underscores(req->stringdata) == -1)
+		{
+			perror("Write to file failure [0]");
+			return;
+		}
 		size_t len = strlen(req->stringdata) + 1;
 		char* file = malloc(len + dirlen);
 		if (file != NULL)
@@ -126,10 +131,10 @@ static void data_to_file(void* buf, size_t size, req_t* req)
 				fwrite(buf, sizeof(char), size, fd);
 				fclose(fd);
 			}
-			else perror("Write to file failure");
+			else perror("Write to file failure [1]");
 			free(file);
 		}
-		else perror("Write to file failure");
+		else perror("Write to file failure [2]");
 	}
 }
 
