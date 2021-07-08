@@ -9,19 +9,21 @@
 #include "../message_type.h"
 
 #define FILE_LOOP_DO(nodel_file, files, file_num, todo) \
-int res;\
+int res; size_t datasize;\
 for (size_t i = 0; i < file_num; i++)\
 {\
-	ERRCHECK( (res = is_existing_file(&files[i])) );\
-	if (res == 0)\
+	res = check_file_name(&files[i], nodel_file);\
+	if (res != 0)\
 	{\
-		ERRCHECK( (res = check_file_name(&files[i], nodel_file)) );\
-		if (res != 0)\
+		res = get_size(&files[i], &datasize);\
+		if (res == 0)\
 		{\
-			if((files[i].data_size + files[i].open_size) > 0)\
+			if (datasize > 0)\
 				todo;\
 		}\
+		else if(errno != ENOENT) return -1;\
 	}\
+	else if (errno != ENOENT) return -1;\
 }\
 
 int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
@@ -94,17 +96,21 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 {
 	size_t curr_older = 0;
 	time_t curr_older_time = time(NULL);
-	time_t temp; int selected = 0;
+	time_t temp; int selected = 0, ret;
 	
 	FILE_LOOP_DO(nodel_file, files, file_num, 
 	{
-		get_usage_data(&files[i], &temp, NULL, NULL);
-		if (temp < curr_older_time)
+		ret = get_usage_data(&files[i], &temp, NULL, NULL);
+		if (ret == 0)
 		{
-			curr_older_time = temp;
-			curr_older = i;
-			selected = 1;
+			if (temp < curr_older_time)
+			{
+				curr_older_time = temp;
+				curr_older = i;
+				selected = 1;
+			}
 		}
+		else if (errno != ENOENT) return -1;
 	});
 
 	if (selected)
@@ -116,23 +122,32 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 	void** buf, size_t* buf_size, char** name, size_t* name_size)
 {
 	ERRCHECK(pthread_mutex_lock(&state->state_mux));
-	size_t clock_pos = state->last_evicted;
+	size_t clock_pos = state->lru_clock_pos;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
-	char temp = 1, selected = 0;
+	char temp; int ret;
 
 	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
-		get_usage_data(&files[clock_pos], NULL, NULL, &temp);
-		if (temp)
+		ret = get_usage_data(&files[clock_pos], NULL, NULL, &temp);
+		if (ret == 0)
 		{
-			update_lru(&files[clock_pos], 0);
-			clock_pos = (clock_pos + 1) % file_num;
-			selected = 1;
+			if (temp == 1)
+			{
+				update_lru(&files[clock_pos], 0);
+				clock_pos = (clock_pos + 1) % file_num;
+			}
+			else
+			{
+				ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
+				ERRCHECK(pthread_mutex_lock(&state->state_mux));
+				state->lru_clock_pos = (clock_pos + 1) % file_num;
+				ERRCHECK(pthread_mutex_unlock(&state->state_mux));
+				return 0;
+			}
 		}
+		else if (errno != ENOENT) return -1;
 	});
-
-	if (selected)
-		ERRCHECK(delete_evicted(log, thread, clock_pos, files, state, buf, buf_size, name, name_size));
+	
 	return 0;
 }
 
@@ -141,17 +156,21 @@ int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 {
 	size_t curr_least_used = 0;
 	int curr_least_used_freq = INT_MAX;
-	int temp, selected = 0;
+	int temp; int selected = 0, ret;
 	
 	FILE_LOOP_DO(nodel_file, files, file_num,
 	{
-		get_usage_data(&files[i], NULL, &temp, NULL);
-		if (temp < curr_least_used_freq)
+		ret = get_usage_data(&files[i], NULL, &temp, NULL);
+		if (ret == 0)
 		{
-			curr_least_used_freq = temp;
-			curr_least_used = i;
-			selected = 1;
+			if (temp < curr_least_used_freq)
+			{
+				curr_least_used_freq = temp;
+				curr_least_used = i;
+				selected = 1;
+			}
 		}
+		else if (errno != ENOENT) return -1;
 	});
 
 	if(selected)
