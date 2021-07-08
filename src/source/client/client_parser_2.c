@@ -48,6 +48,7 @@ int expand_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
 	*reqs = reqs_exp;
 	*curr_reqs = curr_reqs_exp;
 	*reqs_size = reqs_size_exp;
+	return 0;
 }
 
 static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,

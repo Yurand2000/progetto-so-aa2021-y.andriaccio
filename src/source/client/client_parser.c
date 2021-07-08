@@ -164,7 +164,7 @@ int add_open_create_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
 			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 			strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+			ERRCHECK(add_request(temp, &out_reqs, &out_curr_reqs, &out_reqs_size));
 		}
 		else if (req->type == REQUEST_REMOVE)
 		{
@@ -173,11 +173,11 @@ int add_open_create_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
 			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 			strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+			ERRCHECK(add_request(temp, &out_reqs, &out_curr_reqs, &out_reqs_size));
 		}
 
 		//push the actual request ---------------------------------------------
-		ERRCHECK(add_request(*req, out_reqs, out_curr_reqs, out_reqs_size));
+		ERRCHECK(add_request(*req, &out_reqs, &out_curr_reqs, &out_reqs_size));
 
 		//insert the close request --------------------------------------------
 		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK ||
@@ -209,10 +209,15 @@ int add_open_create_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
 				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
-				ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+				ERRCHECK(add_request(temp, &out_reqs, &out_curr_reqs, &out_reqs_size));
 			}
 		}
 	}
+
+	free(*reqs);
+	*reqs = out_reqs;
+	*curr_reqs = out_curr_reqs;
+	*reqs_size = out_reqs_size;
 	return 0;
 }
 
