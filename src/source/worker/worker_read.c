@@ -88,7 +88,7 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 	int n, res, error; size_t count = 0;
 	ERRCHECK(pop_buf(&in_msg->data, sizeof(int), &n));
 
-	long diff; int err, wasclosed;
+	long diff; int wasclosed;
 	void* buf = NULL; void* name = NULL; size_t buf_size = 0, name_size = 0;
 	size_t read_buf, read_name;
 	int total_read = 0;
