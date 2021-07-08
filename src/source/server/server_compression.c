@@ -26,7 +26,7 @@ int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 	return clone_data(in, in_size, out, out_size);
 }
 
-int decompress_data(void* in, size_t in_size, void** out, size_t* out_size, int mode)
+int decompress_data(void* in, size_t in_size, void** out, size_t* out_size)
 {
 	int ret; ERRCHECK((ret = check_param(in, in_size, out, out_size)));
 	if (ret == 1) return 0;
