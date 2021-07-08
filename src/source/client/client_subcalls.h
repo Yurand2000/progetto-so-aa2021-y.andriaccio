@@ -27,7 +27,7 @@ int add_open_create_requests(req_t** out_reqs, size_t* out_curr_reqs, size_t* ou
 void print_operation_result(const char* op_type, const char* file, int res);
 
 void print_help();
-int get_cwd(char* currdir[], size_t* currdir_size);
+int get_cwd(char currdir[], size_t* currdir_size);
 int check_socket_file(char* socket_name);
 
 #endif

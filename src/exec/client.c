@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
 
-	PERRCHECK(get_cwd(&currdir, &currdir_size), "CWD Unexpected error");
+	PERRCHECK(get_cwd(currdir, &currdir_size), "CWD Unexpected error");
 
 	//parse command line arguments. -------------------------------------------
 	int parse = parse_args(argc, argv, &socket_name, &do_print,

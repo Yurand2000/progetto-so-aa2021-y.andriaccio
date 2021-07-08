@@ -64,18 +64,19 @@ void print_operation_result(const char* op_type, const char* file, int res)
 	printf(".\n");
 }
 
-int get_cwd(char* currdir[], size_t* currdir_size)
+int get_cwd(char currdir[], size_t* currdir_size)
 {
-	PTRCHECK(getcwd(*currdir, FILENAME_MAX - 1));
+	PTRCHECK(getcwd(currdir, FILENAME_MAX - 1));
 	*currdir_size = strlen(*currdir);
 
 	//add trailing / if necessary
-	if ((*currdir)[(*currdir_size) - 1] != '/')
+	if (currdir[(*currdir_size) - 1] != '/')
 	{
-		(*currdir)[(*currdir_size)] = '/';
-		(*currdir)[(*currdir_size) + 1] = '\0';
+		currdir[(*currdir_size)] = '/';
+		currdir[(*currdir_size) + 1] = '\0';
 		(*currdir_size)++;
 	}
+	return 0;
 }
 
 int check_socket_file(char* socket_name)
