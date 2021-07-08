@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "errset.h"
+#include "server/server_compression.h"
 
 #define LOCK(file) ERRCHECK(pthread_mutex_lock(&file->mutex))
 #define UNLOCK(file) ERRCHECK(pthread_mutex_unlock(&file->mutex))
@@ -211,11 +212,8 @@ int open_file(file_t* file, int who)
 			file->open_size = 0;
 		else
 		{
-			//decompress the file data into the open_data pointer.
-			//compression not implemented yet.
-			file->open_size = file->data_size;
-			MALLOCDO(file->open_data, file->open_size, { UNLOCK(file); });
-			memcpy(file->open_data, file->data, file->data_size);
+			ERRCHECKDO(decompress_data(file->data, file->data_size,
+				&file->open_data, &file->open_size), UNLOCK(file));
 		}
 	}
 
@@ -243,10 +241,8 @@ int close_file(file_t* file, int who, long* difference)
 		{
 			size_t old_size = file->data_size + file->new_size;
 
-			//compression not implemented yet.
-			file->data_size = file->open_size;
-			REALLOCDO(file->data, file->data, file->data_size, { UNLOCK(file); });
-			memcpy(file->data, file->open_data, file->data_size);
+			ERRCHECKDO(compress_data(file->open_data, file->open_size,
+				&file->data, &file->data_size), UNLOCK(file));
 
 			*difference = (old_size - file->data_size);
 		}

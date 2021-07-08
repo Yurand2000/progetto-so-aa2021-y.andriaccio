@@ -21,6 +21,7 @@ typedef struct config_data
 	int max_files;
 	int max_connections;
 	char algorithm;
+	int use_compression;
 } cfg_t;
 
 #endif

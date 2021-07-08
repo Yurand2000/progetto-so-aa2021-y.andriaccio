@@ -21,6 +21,7 @@
 #include "../source/worker.h"
 #include "../source/readn_writen.h"
 #include "../source/server/server_subcalls.h"
+#include "../source/server/server_compression.h"
 
 int main(int argc, char* argv[])
 {
@@ -34,6 +35,8 @@ int main(int argc, char* argv[])
 		else return 0;
 	}
 	printf("* * * SERVER STARTED * * *\n");
+	//prepare compression library ---------------------------------------------
+	PERRCHECK(compression_init(config_data.use_compression), "Compression library error");
 
 	//prepare socket and start listening --------------------------------------
 	int sck;
@@ -126,5 +129,7 @@ int main(int argc, char* argv[])
 	unlink(config_data.socket_file);
 
 	destroy_log_file_struct(&log_file);
+
+	PERRCHECK(compression_destroy(), "Compression library error [2]");
 	return 0;
 }

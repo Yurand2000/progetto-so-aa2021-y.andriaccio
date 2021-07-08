@@ -61,7 +61,7 @@ server_debug	: server
 server_release	: CFLAGS += $(CRELFLAGS)
 server_release	: server
 server		: $(BLDEXE)/server.out
-$(BLDEXE)/server.out	: $(BLDEXE)/server.o $(OBJ_FILE)
+$(BLDEXE)/server.out	: $(BLDEXE)/server.o $(BLDSRC)/minilzo.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 
 client_debug	: CFLAGS += $(CDEBFLAGS)
@@ -69,7 +69,7 @@ client_debug	: client
 client_release	: CFLAGS += $(CRELFLAGS)
 client_release	: client
 client		: $(BLDEXE)/client.out
-$(BLDEXE)/client.out	: $(BLDEXE)/client.o $(OBJ_FILE)
+$(BLDEXE)/client.out	: $(BLDEXE)/client.o $(BLDSRC)/minilzo.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 
 test1	: all
@@ -130,3 +130,7 @@ endef
 
 $(call make_obj_rules,$(SRC_FILE))
 $(call make_obj_rules,$(SRC_EXEC))
+
+#minilzo compression library
+$(BLDSRC)/minilzo.o : $(SRCFLD)/minilzo/minilzo.c
+  $(CC) $(CFLAGS) -c $< -o $@ $(CFLAGS_END)
