@@ -26,29 +26,6 @@ OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 .PHONY: server server_release server_debug client client_release client_debug
 .PHONY: test1 test2 test2lru test2lfu test3 dummy_clear stats
 
-help :
-	@echo "* available targets: ---------------------------------"
-	@echo "help all debug clean clear cleanobj cleanall"
-	@echo "test1 test2 test3 stats dummy_clear"
-	@echo "* commands: ------------------------------------------"
-	@echo "| help         - shows this help screen"
-	@echo "| all          - compiles for release"
-	@echo "| debug        - complies for debug"
-	@echo "------------------------------------------------------"
-	@echo "| clean, clear - deletes executables and obj files"
-	@echo "| cleanobj     - deletes obj files only"
-	@echo "| dummy_clear  - delets the files needed for test3"
-	@echo "| cleanall     - calls [clean] and [dummy_clear]. also"
-	@echo "                 deletes the default log file."
-	@echo "------------------------------------------------------"
-	@echo "| test1, test2, test3 - run default tests"
-	@echo "| test2lru, test2lfu  - run test2 with different cache"
-	@echo "                        cache miss algorithms"
-	@echo "| stats               - run the statistiche.sh script "
-	@echo "                        on the default log file. (This"
-	@echo "                        is also  the default  log  for"
-	@echo "                        all the tests.)"
-
 TARGET	= server_release client_release
 TARGET_DEBUG	= server_debug client_debug
 
@@ -72,6 +49,29 @@ client		: $(BLDEXE)/client.out
 $(BLDEXE)/client.out	: $(BLDEXE)/client.o $(BLDSRC)/minilzo.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 
+help :
+	@echo "* available targets: ---------------------------------"
+	@echo "help all debug clean clear cleanobj cleanall"
+	@echo "test1 test2 test3 stats dummy_clear"
+	@echo "* commands: ------------------------------------------"
+	@echo "| help         - shows this help screen"
+	@echo "| all          - compiles for release"
+	@echo "| debug        - complies for debug"
+	@echo "------------------------------------------------------"
+	@echo "| clean, clear - deletes executables and obj files"
+	@echo "| cleanobj     - deletes obj files only"
+	@echo "| dummy_clear  - delets the files needed for test3"
+	@echo "| cleanall     - calls [clean] and [dummy_clear]. also"
+	@echo "                 deletes the default log file."
+	@echo "------------------------------------------------------"
+	@echo "| test1, test2, test3 - run default tests"
+	@echo "| test2lru, test2lfu  - run test2 with different cache"
+	@echo "                        cache miss algorithms"
+	@echo "| stats               - run the statistiche.sh script "
+	@echo "                        on the default log file. (This"
+	@echo "                        is also  the default  log  for"
+	@echo "                        all the tests.)"
+
 test1	: all
 	@$(TESTD)/test1/test1.sh $(BLDEXE)
 test2	: all
@@ -90,6 +90,7 @@ dummy	:
 	@echo "the files are created only once."
 	@echo "if you want to regenerate the files, run 'make dummy_clear'"
 	@echo "and then restart the test3."
+	@-mkdir -p $(TESTD)/test3/files
 	@$(SEXEC)/dummy_gen.sh 200 275000 450000 $(TESTD)/test3/files/
 	@echo "dummy" > dummy
 
@@ -133,4 +134,5 @@ $(call make_obj_rules,$(SRC_EXEC))
 
 #minilzo compression library
 $(BLDSRC)/minilzo.o : $(SRCFLD)/minilzo/minilzo.c
-  $(CC) $(CFLAGS) -c $< -o $@ $(CFLAGS_END)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@ $(CFLAGS_END)
