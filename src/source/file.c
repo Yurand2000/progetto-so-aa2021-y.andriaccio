@@ -243,6 +243,7 @@ int close_file(file_t* file, int who, long* difference)
 		{
 			size_t old_size = file->data_size + file->new_size;
 
+			free(file->data); file->data = NULL; file->data_size = 0;
 			ERRCHECKDO(compress_data(file->open_data, (size_t)file->open_size,
 				&file->data, &file->data_size), UNLOCK(file));
 
