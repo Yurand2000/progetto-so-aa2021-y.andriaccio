@@ -68,7 +68,6 @@ void init_default_config(cfg_t* cfg)
 	cfg->max_files = 100;
 	cfg->max_connections = 10;
 	cfg->algorithm = ALGO_FIFO;
-	cfg->use_compression = 0;
 }
 
 int parse_config_from_file(cfg_t* cfg, char const* filename)
@@ -113,13 +112,6 @@ int parse_config_from_file(cfg_t* cfg, char const* filename)
 	{
 		temp2 = strtol(opt_str, NULL, 0);
 		if (temp2 > 0 && temp2 < MAX_CONNECTIONS) cfg->max_connections = temp2;
-	}
-	
-	opt_str = get_option(&read_cfg, "use_compression");
-	if (opt_str != NULL)
-	{
-		temp2 = strtol(opt_str, NULL, 0);
-		if (temp2 == 1) cfg->use_compression = 1;
 	}
 
 	opt_str = get_option(&read_cfg, "algorithm");

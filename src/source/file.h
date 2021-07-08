@@ -21,7 +21,6 @@ typedef struct file_struct {
 	ssize_t open_size;
 	void* open_data;
 	size_t new_size; //bytes added since last open.
-	int compressed;
 
 	//cache miss algorithms data
 	time_t fifo_creation_time;

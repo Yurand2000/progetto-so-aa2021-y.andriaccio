@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 	}
 	printf("* * * SERVER STARTED * * *\n");
 	//prepare compression library ---------------------------------------------
-	PERRCHECK(compression_init(config_data.use_compression), "Compression library error");
+	PERRCHECK(compression_init(), "Compression library error");
 
 	//prepare socket and start listening --------------------------------------
 	int sck;
