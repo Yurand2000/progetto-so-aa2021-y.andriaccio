@@ -80,15 +80,10 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 	ret = force_open_file(&files[file]);
 	if (ret == 0)
 	{
-		/*ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
+		ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
 
 		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
-		ERRCHECK(force_remove_file(&files[file], &storage));*/
-
-		ERRCHECKDO(force_read_file(&files[file], buf, buf_size, buf_size), perror("Cache Miss [0]"));
-
-		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
-		ERRCHECKDO(force_remove_file(&files[file], &storage), perror("Cache Miss [1]"));
+		ERRCHECK(force_remove_file(&files[file], &storage));
 
 		do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
 

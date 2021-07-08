@@ -1,5 +1,5 @@
-#ifndef CLIENT_MACROS
-#define CLIENT_MACROS
+#ifndef CLIENT
+#define CLIENT
 #include "../source/win32defs.h"
 
 #include <stdio.h>
