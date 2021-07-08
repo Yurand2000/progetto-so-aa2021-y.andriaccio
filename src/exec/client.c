@@ -9,6 +9,7 @@
 
 #define CLIENT_API_ENABLE
 
+#include "../source/client/client_subcalls.h"
 #include "../source/client_api.h"
 #include "../source/worker/worker_generics.h"
 

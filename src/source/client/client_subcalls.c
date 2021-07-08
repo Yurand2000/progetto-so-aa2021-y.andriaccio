@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <time.h>
 
-#include "../source/client_api.h"
+#include "../client_api.h"
 
 void print_help()
 {
