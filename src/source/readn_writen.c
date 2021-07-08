@@ -18,7 +18,7 @@ readn(int fd, void *ptr, size_t n) {
 		}
 		else if (nread == 0) break; /* EOF */
 		nleft -= nread;
-		(char*)ptr += nread;
+		ptr = (char*)ptr + nread;
 	}
 	return(n - nleft); /* return >= 0 */
 }
@@ -36,7 +36,7 @@ writen(int fd, void *ptr, size_t n) {
 		}
 		else if (nwritten == 0) break;
 		nleft -= nwritten;
-		(char*)ptr += nwritten;
+		ptr = (char*)ptr + nwritten;
 	}
 	return(n - nleft); /* return >= 0 */
 }
