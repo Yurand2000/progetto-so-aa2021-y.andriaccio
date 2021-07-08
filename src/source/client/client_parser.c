@@ -117,7 +117,7 @@ int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 	return 0;
 }
 
-static int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
+int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
 	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
 	int* count_ptr, const char* currdir, size_t currdir_size)
 {

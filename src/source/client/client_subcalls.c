@@ -7,6 +7,8 @@
 #include <dirent.h>
 #include <time.h>
 
+#include "../source/client_api.h"
+
 void print_help()
 {
 #define HELP_TEXT "FileServer Client, help:\n"\
