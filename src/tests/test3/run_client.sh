@@ -28,11 +28,13 @@ OP_SIZE=${#OPS[@]}
 
 RUN=$CLIENT$CLIENT_OPT
 function on_sigint(){
+  echo "Client calls: "$COUNT
   exit 0
 }
 trap on_sigint SIGINT
 trap on_sigint SIGUSR1
 
+COUNT=0
 while true; do
   RAND=$(od -vAn -N4 -t u4 < /dev/urandom)
   RAND=$(($RAND % $OP_SIZE))
@@ -40,8 +42,9 @@ while true; do
   CALL="$RUN $(rand_op) $(rand_op) $(rand_op) $(rand_op) $(rand_op) > /dev/null 2> /dev/null"
   eval "$CALL"
   RET=$?
+  ((COUNT++))
   if [ $RET -ne 0 ] ; then
-    echo "Client returned an error: "$RET" - "$CALL
+    echo "Client returned an error: "$RET" - "$CALL" - "$COUNT
     break
   fi
 done

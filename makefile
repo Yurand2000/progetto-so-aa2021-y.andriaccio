@@ -24,7 +24,7 @@ OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
 .PHONY:	all help debug clean clear cleanobj cleanall
 .PHONY: server server_release server_debug client client_release client_debug
-.PHONY: test1 test2 test3 dummy_clear stats
+.PHONY: test1 test2 test2lru test2lfu test3 dummy_clear stats
 
 help :
 	@echo "* available targets: ---------------------------------"
@@ -41,7 +41,9 @@ help :
 	@echo "| cleanall     - calls [clean] and [dummy_clear]. also"
 	@echo "                 deletes the default log file."
 	@echo "------------------------------------------------------"
-	@echo "| test1, test2, test3 - run tests"
+	@echo "| test1, test2, test3 - run default tests"
+	@echo "| test2lru, test2lfu  - run test2 with different cache"
+	@echo "                        cache miss algorithms"
 	@echo "| stats               - run the statistiche.sh script "
 	@echo "                        on the default log file. (This"
 	@echo "                        is also  the default  log  for"
@@ -73,7 +75,11 @@ $(BLDEXE)/client.out	: $(BLDEXE)/client.o $(OBJ_FILE)
 test1	: all
 	@$(TESTD)/test1/test1.sh $(BLDEXE)
 test2	: all
-	@$(TESTD)/test2/test2.sh $(BLDEXE)
+	@$(TESTD)/test2/test2.sh $(BLDEXE) fifo
+test2lru : all
+	@$(TESTD)/test2/test2.sh $(BLDEXE) lru
+test2lfu : all
+	@$(TESTD)/test2/test2.sh $(BLDEXE) lfu
 test3	: all dummy
 	@$(TESTD)/test3/test3.sh $(BLDEXE)
 stats	:
