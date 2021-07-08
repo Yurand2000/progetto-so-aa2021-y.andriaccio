@@ -67,7 +67,7 @@ int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 		else
 		{
 			free(*out); *out = NULL;
-			ERRSET(EILSEQ, -1);
+			ERRSET(ENOTSUP, -1);
 		}
 	}
 	else return clone_data(in, in_size, out, out_size);
@@ -89,7 +89,7 @@ int decompress_data(void* in, size_t in_size, void** out, size_t* out_size)
 		ret = lzo1x_decompress(in, in_size, *out, &out_len, NULL);
 		if (ret == LZO_E_OK)
 		{
-			if (out_len >= (lzo_uint)in_size)
+			if (out_len < (lzo_uint)in_size)
 			{
 				free(*out); *out = NULL;
 				ERRSET(EILSEQ, -1);
@@ -104,7 +104,7 @@ int decompress_data(void* in, size_t in_size, void** out, size_t* out_size)
 		else
 		{
 			free(*out); *out = NULL;
-			ERRSET(EILSEQ, -1);
+			ERRSET(ENOTSUP, -1);
 		}
 	}
 	else return clone_data(in, in_size, out, out_size);
