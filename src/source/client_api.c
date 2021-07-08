@@ -194,23 +194,25 @@ int readNFiles(int n, const char* dirname)
 
 	net_msg msg;
 	BUILD_EMPTY_MESSAGE(&msg, MESSAGE_READN_FILE);
+	if (n < 0) n = 0;
 	push_buf(&msg.data, sizeof(int), &n);
 	set_checksum(&msg);
 
 	SEND_RECEIVE_TO_SOCKET(conn, &msg, CLOSE);
 
+	int ret = 0;
 	if (is_server_message(&msg, MESSAGE_RNFILE_ACK) == 0)
 	{
 		msg_t flags = GETFLAGS(msg.type);
 		if (HASFLAG(flags, MESSAGE_OP_SUCC))
 		{
 			if(dirname != NULL)
-				ERRCHECKDO(save_cached_files(&msg, dirname), { destroy_message(&msg); });
+				ERRCHECKDO((ret = save_cached_files(&msg, dirname)), { destroy_message(&msg); });
 		}
 		else
 		{ ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 
-		return 0;
+		return ret;
 	}
 	else { ERRSETDO(EBADMSG, destroy_message(&msg), -1); }
 }
@@ -467,7 +469,7 @@ int removeFile(const char* pathname)
 
 static int save_cached_files(net_msg* msg, const char* dirname)
 {
-	size_t count, len, name_len = 0, buf_len = 0;
+	size_t count = 0, len, name_len = 0, buf_len = 0;
 	char* buf = NULL; char* name = NULL;
 
 	ERRCHECKDO(pop_buf(&msg->data, sizeof(size_t), &count), { free(name); free(buf); });
@@ -497,7 +499,7 @@ static int save_cached_files(net_msg* msg, const char* dirname)
 	}
 	free(name);
 	free(buf);
-	return 0;
+	return count;
 }
 
 static int write_buf_to_file(char const* filename, char* buf, size_t filesize, const char* dirname)

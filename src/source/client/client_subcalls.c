@@ -8,7 +8,7 @@
 #include <time.h>
 
 #include "../client_api.h"
-#include "../source/worker/worker_generics.h"
+#include "../worker/worker_generics.h"
 
 void print_help()
 {
