@@ -22,16 +22,30 @@ OBJ_FILE = $(patsubst $(SOURCE)/%.c, $(BLDSRC)/%.o, $(SRC_FILE))
 SRC_EXEC = $(call rwildcard, $(SEXEC), *.c)
 OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
-.PHONY:	all help debug clean clear cleanobj #cleangcov #(gcov options)
+.PHONY:	all help debug clean clear cleanobj cleanall
 .PHONY: server server_release server_debug client client_release client_debug
-.PHONY: test1 test2 test3
+.PHONY: test1 test2 test3 dummy_clear stats
 
 help :
-	@echo "available targets:"
-	@echo "help all debug clean/clear cleanobj"
-	@echo "server server_release server_debug"
-	@echo "client client_release client_debug"
-	@echo "test1 test2 test3"
+	@echo "* available targets: ---------------------------------"
+	@echo "help all debug clean clear cleanobj cleanall"
+	@echo "test1 test2 test3 stats dummy_clear"
+	@echo "* commands: ------------------------------------------"
+	@echo "| help         - shows this help screen"
+	@echo "| all          - compiles for release"
+	@echo "| debug        - complies for debug"
+	@echo "------------------------------------------------------"
+	@echo "| clean, clear - deletes executables and obj files"
+	@echo "| cleanobj     - deletes obj files only"
+	@echo "| dummy_clear  - delets the files needed for test3"
+	@echo "| cleanall     - calls [clean] and [dummy_clear]. also"
+	@echo "                 deletes the default log file."
+	@echo "------------------------------------------------------"
+	@echo "| test1, test2, test3 - run tests"
+	@echo "| stats               - run the statistiche.sh script "
+	@echo "                        on the default log file. (This"
+	@echo "                        is also  the default  log  for"
+	@echo "                        all the tests.)"
 
 TARGET	= server_release client_release
 TARGET_DEBUG	= server_debug client_debug
@@ -60,8 +74,23 @@ test1	: all
 	@$(TESTD)/test1/test1.sh $(BLDEXE)
 test2	: all
 	@$(TESTD)/test2/test2.sh $(BLDEXE)
-test3	: all
+test3	: all dummy
 	@$(TESTD)/test3/test3.sh $(BLDEXE)
+stats	:
+	@$(SEXEC)/statistiche.sh log.txt
+
+dummy	:
+	@echo "creating files for test3... (circa 64Mb)"
+	@echo "the files are created only once."
+	@echo "if you want to regenerate the files, run 'make dummy_clear'"
+	@echo "and then restart the test3."
+	@$(SEXEC)/dummy_gen.sh 200 275000 450000 $(TESTD)/test3/files/
+	@echo "dummy" > dummy
+
+dummy_clear :
+	@-rm -f dummy
+	@-rm -f -r $(TESTD)/test3/files/
+	@-mkdir -p $(TESTD)/test3/files
 
 #CLEAR FUNCTIONS
 clear : clean
@@ -70,7 +99,11 @@ clean :
 	@-rm -f -r $(COVERAGE)	
 
 cleanobj :
-	@-rm -r $(BUILD)/*/*.o
+	@-rm -f -r $(BUILD)/exec/*.o
+	@-rm -f -r $(BUILD)/source
+
+cleanall : clean dummy_clear
+	@-rm -f log.txt
 
 #rule template for obj compilation
 obj_from_src = $(subst $(SRCFLD),$(BUILD),$(subst .c,.o,$(1)))
