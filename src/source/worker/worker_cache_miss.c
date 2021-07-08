@@ -25,8 +25,8 @@ for (size_t i = 0; i < file_num; i++)\
 			}\
 			else if(errno != ENOENT) return -1;\
 		}\
-		else if (errno != ENOENT) return -1;\
-	else if (errno != ENOENT) return -1;\
+		else if (res == -1 && errno != ENOENT) return -1;\
+	else if (res == -1 && errno != ENOENT) return -1;\
 }\
 
 int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state, net_msg* out_msg)
@@ -66,7 +66,11 @@ int cache_miss(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 		return 0;
 	}
-	else ERRSET(ECANCELED, -1);
+	else
+	{
+		do_log(log, thread, 0, "none", STRING_CACHE_MISS, "Skipped.", 0, 0);
+		ERRSET(ECANCELED, -1);
+	}
 }
 
 int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state* state,
@@ -76,10 +80,15 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 	ret = force_open_file(&files[file]);
 	if (ret == 0)
 	{
-		ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
+		/*ERRCHECK(force_read_file(&files[file], buf, buf_size, buf_size));
 
 		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
-		ERRCHECK(force_remove_file(&files[file], &storage));
+		ERRCHECK(force_remove_file(&files[file], &storage));*/
+
+		ERRCHECKDO(force_read_file(&files[file], buf, buf_size, buf_size), perror("Cache Miss [0]"));
+
+		ERRCHECK(get_file_name(&files[file], name, name_size, name_size));
+		ERRCHECKDO(force_remove_file(&files[file], &storage), perror("Cache Miss [1]"));
 
 		do_log(log, thread, 0, *name, STRING_CACHE_MISS, "Success.", 0, 0);
 
@@ -88,8 +97,7 @@ int delete_evicted(log_t* log, int thread, int file, file_t* files, shared_state
 		state->current_files--;
 		ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 	}
-	else if (errno != ENOENT && errno != EAGAIN) return -1;\
-	else do_log(log, thread, 0, "none", STRING_CACHE_MISS, "Skipped.", 0, 0);
+	else if (errno != ENOENT && errno != EAGAIN) return -1;
 
 	return 0;
 }

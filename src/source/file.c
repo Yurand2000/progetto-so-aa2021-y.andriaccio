@@ -309,11 +309,6 @@ int force_read_file(file_t* file, void** out_data, size_t* out_data_size, size_t
 {
 	if (file == NULL || out_data == NULL || out_data_size == NULL
 		|| read_size == NULL) ERRSET(EINVAL, -1);
-	LOCK(file);
-	CHECK_EXISTENCE(file);
-	file->owner = OWNER_ADMIN;
-	UNLOCK(file);
-
 	ERRCHECK(read_file(file, OWNER_ADMIN, out_data, out_data_size, read_size));
 	return 0;
 }
@@ -413,11 +408,6 @@ int remove_file(file_t* file, int who, long* data_size)
 int force_remove_file(file_t* file, long* data_size)
 {
 	if (file == NULL) ERRSET(EINVAL, -1);
-	LOCK(file);
-	CHECK_EXISTENCE(file);
-	file->owner = OWNER_ADMIN;
-	UNLOCK(file);
-
 	ERRCHECK(remove_file(file, OWNER_ADMIN, data_size));
 	return 0;
 }
