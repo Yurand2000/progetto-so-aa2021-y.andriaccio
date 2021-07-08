@@ -117,146 +117,32 @@ int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 	return 0;
 }
 
-int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
-	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
-	int* count_ptr, const char* currdir, size_t currdir_size)
+int add_open_create_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size)
 {
-	if (dirname == NULL) ERRSET(EINVAL, -1);
-
-	//first call initializes the counter to compare against max ---------------
-	int count = 0;
-	if (count_ptr == NULL) count_ptr = &count;
-
-	//generate the absolute path string ---------------------------------------
-	char* abspath; size_t len, abspath_size;
-
-	abspath_size = len = strlen(dirname);
-	if (dirname[0] == '/')
-	{
-		MALLOC(abspath, sizeof(char) * abspath_size + 1);
-		strncpy(abspath, dirname, abspath_size);
-	}
-	else
-	{
-		abspath_size += currdir_size;
-		MALLOC(abspath, sizeof(char) * abspath_size + 1);
-		strncpy(abspath, currdir, currdir_size);
-		strncpy(abspath + currdir_size, dirname, len);
-		abspath[abspath_size] = '\0';
-	}
-
-	//add trailing slash if necessary
-	if (abspath[abspath_size - 1] != '/')
-	{
-		abspath_size++;
-		REALLOC(abspath, abspath, abspath_size + 1);
-		abspath[abspath_size - 1] = '/';
-		abspath[abspath_size] = '\0';
-	}
-
-	//open the directory and look for files -----------------------------------
-	struct dirent* entry;
-	DIR* dir_ptr; req_t temp;
-
-	init_request(&temp);
-	temp.type = REQUEST_WRITE;
-	temp.dir_len = retdir_size;
-
-	PTRCHECK((dir_ptr = opendir(abspath)));
-
-	entry = readdir(dir_ptr);
-	while (entry != NULL && (max == 0 || *count_ptr < max))
-	{
-		if (entry->d_type == DT_REG)
-		{
-			temp.stringdata_len = len = strlen(entry->d_name) + 1;
-			temp.stringdata_len += abspath_size;
-			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-			strncpy(temp.stringdata, abspath, abspath_size);
-			strncpy(temp.stringdata + abspath_size, entry->d_name, len);
-
-			if (temp.dir_len != 0)
-			{
-				MALLOC(temp.dir, sizeof(char) * temp.dir_len);
-				strncpy(temp.dir, retdir, temp.dir_len);
-			}
-
-			add_request(temp, reqs, curr_reqs, reqs_size);
-			(*count_ptr)++;
-		}
-		else if (entry->d_type == DT_DIR && strncmp(entry->d_name, ".", 2) != 0
-			&& strncmp(entry->d_name, "..", 3) != 0)
-		{
-			expand_dir_to_files(entry->d_name, max, retdir, retdir_size,
-				reqs, curr_reqs, reqs_size,
-				count_ptr, abspath, abspath_size);
-		}
-		entry = readdir(dir_ptr);
-	}
-	free(abspath);
-
-	ERRCHECK(closedir(dir_ptr));
-	return 0;
-}
-
-int split_and_fix_request_files(req_t* req, req_t** reqs,
-	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size)
-{
-	char* saveptr; char* token;
-	req_t new_req; size_t len;
-	init_request(&new_req);
-	new_req.type = req->type;
-	new_req.dir_len = req->dir_len;
-
-	token = strtok_r(req->stringdata, ",", &saveptr);
-	while (token != NULL)
-	{
-		new_req.stringdata_len = len = strlen(token) + 1;
-		if (token[0] != '/') new_req.stringdata_len += currdir_size;
-		MALLOC(new_req.stringdata, sizeof(char) * new_req.stringdata_len);
-		if (token[0] != '/')
-		{
-			strncpy(new_req.stringdata, currdir, currdir_size);
-			strncpy(new_req.stringdata + currdir_size, token, len);
-		}
-		else
-			strncpy(new_req.stringdata, token, new_req.stringdata_len);
-
-		if (new_req.dir_len != 0)
-		{
-			MALLOC(new_req.dir, sizeof(char) * new_req.dir_len);
-			strncpy(new_req.dir, req->dir, new_req.dir_len);
-		}
-
-		add_request(new_req, reqs, curr_reqs, reqs_size);
-		token = strtok_r(NULL, ",", &saveptr);
-	}
-
-	return 0;
-}
-
-int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_reqs,
-	size_t* out_curr_reqs, size_t* out_reqs_size)
-{
+	req_t* out_reqs = NULL; size_t out_curr_reqs = 0, out_reqs_size = 0;
 	req_t temp;
 	init_request(&temp);
 
-	for (size_t i = 0; i < reqs_num; i++)
+	for (size_t i = 0; i < *curr_reqs; i++)
 	{
-		req_t* req = &reqs[i];
+		req_t* req = &(*reqs)[i];
 
-		//insert the open request
+		//insert the open request ---------------------------------------------
 		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK ||
 			req->type == REQUEST_UNLOCK || req->type == REQUEST_APPEND)
 		{
 			int insert = 0;
-			for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
+			for (int j = out_curr_reqs - 1; j >= 0 && insert == 0; j--)
 			{
-				if ((*out_reqs)[j].type == REQUEST_REMOVE
-					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = 1;
-				if (((*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
-					|| (*out_reqs)[j].type == REQUEST_CREATE_LOCK)
-					&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = -1;
+				req_t* reqj = &out_reqs[j];
+
+				if (  reqj->type == REQUEST_REMOVE &&
+					strcmp(reqj->stringdata, req->stringdata) == 0) insert = 1;
+
+				if ( (reqj->type == REQUEST_OPEN ||
+					  reqj->type == REQUEST_OPEN_LOCK ||
+					  reqj->type == REQUEST_CREATE_LOCK) &&
+					strcmp(reqj->stringdata, req->stringdata) == 0) insert = -1;
 			}
 
 			if (insert != -1)
@@ -266,61 +152,66 @@ int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_reqs,
 				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
 				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
 
+				ERRCHECK(add_request(temp, &out_reqs, &out_curr_reqs, &out_reqs_size));
+			}
+		}
+
+		//specific requests for write and remove file -------------------------
+		if (req->type == REQUEST_WRITE)
+		{
+			temp.type = REQUEST_CREATE_LOCK;
+			temp.stringdata_len = req->stringdata_len;
+			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+			strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+		}
+		else if (req->type == REQUEST_REMOVE)
+		{
+			temp.type = REQUEST_OPEN_LOCK;
+			temp.stringdata_len = req->stringdata_len;
+			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+			strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
+			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
+		}
+
+		//push the actual request ---------------------------------------------
+		ERRCHECK(add_request(*req, out_reqs, out_curr_reqs, out_reqs_size));
+
+		//insert the close request --------------------------------------------
+		if (req->type == REQUEST_READ || req->type == REQUEST_LOCK ||
+			req->type == REQUEST_UNLOCK || req->type == REQUEST_WRITE ||
+			req->type == REQUEST_APPEND)
+		{
+			int insert = 0;
+			for (int j = i + 1; j < *curr_reqs; j++)
+			{
+
+				if ((*reqs)[j].stringdata != NULL &&
+					strcmp((*reqs)[j].stringdata, req->stringdata) == 0) insert = 1;
+			}
+
+			for (int j = out_curr_reqs - 1; j >= 0 && insert == 0; j--)
+			{
+				req_t* reqj = &out_reqs[j];
+				if (reqj->type == REQUEST_REMOVE
+					&& strcmp(reqj->stringdata, req->stringdata) == 0) insert = 1;
+				if ((reqj->type == REQUEST_OPEN || reqj->type == REQUEST_OPEN_LOCK
+					|| reqj->type == REQUEST_CREATE_LOCK)
+					&& strcmp(reqj->stringdata, req->stringdata) == 0) insert = -1;
+			}
+
+			if (insert == -1)
+			{
+				temp.type = REQUEST_CLOSE;
+				temp.stringdata_len = req->stringdata_len;
+				MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
+				strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
+
 				ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
 			}
 		}
-
-		//specific requests for write and remove file
-		if (reqs[i].type == REQUEST_WRITE)
-		{
-			temp.type = REQUEST_CREATE_LOCK;
-			temp.stringdata_len = reqs[i].stringdata_len;
-			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-			strncpy(temp.stringdata, reqs[i].stringdata, temp.stringdata_len);
-
-			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
-		}
-		else if (reqs[i].type == REQUEST_REMOVE)
-		{
-			temp.type = REQUEST_OPEN_LOCK;
-			temp.stringdata_len = reqs[i].stringdata_len;
-			MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-			strncpy(temp.stringdata, reqs[i].stringdata, temp.stringdata_len);
-
-			ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
-		}
-
-		//push the actual request
-		ERRCHECK(add_request(reqs[i], out_reqs, out_curr_reqs, out_reqs_size))
-
-			//insert the close request
-			if (req->type == REQUEST_READ || req->type == REQUEST_LOCK || req->type == REQUEST_UNLOCK
-				|| req->type == REQUEST_WRITE || req->type == REQUEST_APPEND)
-			{
-				int insert = 0;
-				for (int j = i + 1; j < reqs_num; j++)
-				{
-					if (reqs[j].stringdata != NULL && strcmp(reqs[j].stringdata, req->stringdata) == 0) insert = 1;
-				}
-				for (int j = *out_curr_reqs - 1; j >= 0 && insert == 0; j--)
-				{
-					if ((*out_reqs)[j].type == REQUEST_REMOVE
-						&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = 1;
-					if (((*out_reqs)[j].type == REQUEST_OPEN || (*out_reqs)[j].type == REQUEST_OPEN_LOCK
-						|| (*out_reqs)[j].type == REQUEST_CREATE_LOCK)
-						&& strcmp((*out_reqs)[j].stringdata, req->stringdata) == 0) insert = -1;
-				}
-
-				if (insert == -1)
-				{
-					temp.type = REQUEST_CLOSE;
-					temp.stringdata_len = req->stringdata_len;
-					MALLOC(temp.stringdata, sizeof(char) * temp.stringdata_len);
-					strncpy(temp.stringdata, req->stringdata, temp.stringdata_len);
-
-					ERRCHECK(add_request(temp, out_reqs, out_curr_reqs, out_reqs_size));
-				}
-			}
 	}
 	return 0;
 }

@@ -7,8 +7,6 @@
 #include <dirent.h>
 #include <time.h>
 
-#define CLIENT_API_ENABLE
-
 #include "../source/client/client_subcalls.h"
 #include "../source/client_api.h"
 #include "../source/worker/worker_generics.h"
@@ -17,77 +15,27 @@ int main(int argc, char* argv[])
 {
 	char* socket_name = NULL;
 	char currdir[FILENAME_MAX]; size_t currdir_size;
-	PERRCHECK(getcwd(currdir, FILENAME_MAX - 1) == NULL, "CWD Unexpected error");
-	currdir_size = strlen(currdir);
-
-	//add trailing / if necessary
-	if (currdir[currdir_size - 1] != '/')
-	{
-		currdir[currdir_size] = '/';
-		currdir[currdir_size + 1] = '\0';
-		currdir_size++;
-	}
-
 	req_t* reqs = NULL; size_t curr_reqs = 0, reqs_size = 0;
 	int do_print = 0; int time_between_reqs = 0;
+
+	PERRCHECK(get_cwd(&currdir, &currdir_size), "CWD Unexpected error");
 
 	//parse command line arguments. -------------------------------------------
 	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
 	if (parse == 1) return 0;
-	else if (parse == -1)
-	{
-		if(errno != 0)
-			perror("Error");
-		return -1;
-	}
+	PERRCHECK(parse, "CMD Parser error");
+	PERRCHECK(check_socket_file(socket_name), "Socket File Error");
 
-	if (socket_name == NULL || socket_name[0] == '\0')
-	{
-		printf("-f flag is mandatory. start with -h for details.\n");
-		return -1;
-	}
-	else
-	{
-		ERRCHECKDO(access(socket_name, R_OK | W_OK),
-			printf("socket file does not exist. Has the server started?\n"));
-	}
-
+	//if there are no requests, print the help
 	if (curr_reqs == 0) { print_help(); return 0; }
 
-	//expand all requests that have a directory instead of a file. ------------
-	req_t* reqs_exp = NULL; size_t curr_reqs_exp = 0, reqs_size_exp = 0;
-	for (size_t i = 0; i < curr_reqs; i++)
-	{
-		if (reqs[i].type == REQUEST_WRITE_DIR)
-		{
-			expand_dir_to_files(reqs[i].stringdata, reqs[i].n,
-				reqs[i].dir, reqs[i].dir_len,
-				&reqs_exp, &curr_reqs_exp, &reqs_size_exp,
-				NULL, currdir, currdir_size);
-			destroy_request(&reqs[i]);
-		}
-		else if (reqs[i].type == REQUEST_READN)
-		{
-			add_request(reqs[i], &reqs_exp, &curr_reqs_exp, &reqs_size_exp);
-		}
-		else
-		{
-			split_and_fix_request_files(&reqs[i], &reqs_exp, &curr_reqs_exp,
-				&reqs_size_exp, currdir, currdir_size);
-			destroy_request(&reqs[i]);
-		}
-	}
-
-	//add open/create and close requests. -------------------------------------
-	curr_reqs = 0;	//using the old reqs array, but as if it was empty.
-					//all old memory has already been cleared.
-
-	add_open_create_requests(reqs_exp, curr_reqs_exp, &reqs, &curr_reqs, &reqs_size);
-	free(reqs_exp);
+	PERRCHECK(expand_requests(&reqs, &curr_reqs, &reqs_size, currdir, currdir_size),
+		"Expand Requests Parse Error");
+	PERRCHECK(add_open_create_requests(&reqs, &curr_reqs, &reqs_size),
+		"Open/Create Parser Error");
 
 	//call the client api -----------------------------------------------------
-#ifdef CLIENT_API_ENABLE
 #define DO_PRINT(op, file, res) if (do_print) print_operation_result(op, file, res);
 
 	int res; FILE* fd;
@@ -203,9 +151,8 @@ int main(int argc, char* argv[])
 	nanosleep(&waittime, NULL);
 
 	closeConnection(socket_name);
-#endif
 
-	//clean and close
+	//clean and close ---------------------------------------------------------
 	for (size_t i = 0; i < curr_reqs; i++)
 		destroy_request(&reqs[i]);
 	free(reqs);

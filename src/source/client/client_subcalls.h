@@ -16,22 +16,18 @@
 int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 	req_t** reqs, size_t* curr_reqs, size_t* reqs_size, int* time_between_reqs);
 
-//expands the given directory to its files in requests.
-int expand_dir_to_files(char* dirname, int max, char* retdir, size_t retdir_size,
-	req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
-	int* count_ptr, const char* currdir, size_t currdir_size);
-
-//split multifile requests and changes local to absolute path
-int split_and_fix_request_files(req_t* req, req_t** reqs,
-	size_t* curr_reqs, size_t* reqs_size, const char* currdir, size_t currdir_size);
+//expands the requests having a directory as argument and multifile requests.
+int expand_requests(req_t** reqs, size_t* curr_reqs, size_t* reqs_size,
+	char currdir[], size_t currdir_size);
 
 //add open/create and close request after each operation
-int add_open_create_requests(req_t* reqs, size_t reqs_num, req_t** out_reqs,
-	size_t* out_curr_reqs, size_t* out_reqs_size);
-
-void print_help();
+int add_open_create_requests(req_t** out_reqs, size_t* out_curr_reqs, size_t* out_reqs_size);
 
 //-p option printer
 void print_operation_result(const char* op_type, const char* file, int res);
+
+void print_help();
+int get_cwd(char* currdir[], size_t* currdir_size);
+int check_socket_file(char* socket_name);
 
 #endif

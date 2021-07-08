@@ -63,3 +63,32 @@ void print_operation_result(const char* op_type, const char* file, int res)
 		printf("; Bytes: read %d; write %d", bytes_read, bytes_write);
 	printf(".\n");
 }
+
+int get_cwd(char* currdir[], size_t* currdir_size)
+{
+	ERRCHECK(getcwd(*currdir, FILENAME_MAX - 1) == NULL);
+	*currdir_size = strlen(*currdir);
+
+	//add trailing / if necessary
+	if (*currdir[*currdir_size - 1] != '/')
+	{
+		*currdir[*currdir_size] = '/';
+		*currdir[*currdir_size + 1] = '\0';
+		*currdir_size++;
+	}
+}
+
+int check_socket_file(char* socket_name)
+{
+	if (socket_name == NULL || socket_name[0] == '\0')
+	{
+		printf("-f flag is mandatory. start with -h for details.\n");
+		ERRSET(ENOENT, -1);
+	}
+	else
+	{
+		ERRCHECKDO(access(socket_name, R_OK | W_OK),
+			printf("socket file not found. Has the server started?\n"));
+	}
+	return 0;
+}
