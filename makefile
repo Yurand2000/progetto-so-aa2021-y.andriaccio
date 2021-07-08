@@ -22,7 +22,7 @@ OBJ_FILE = $(patsubst $(SOURCE)/%.c, $(BLDSRC)/%.o, $(SRC_FILE))
 SRC_EXEC = $(call rwildcard, $(SEXEC), *.c)
 OUT_EXEC = $(patsubst $(SEXEC)/%.c, $(BLDEXE)/%.out, $(SRC_TEST))
 
-.PHONY:	all help debug clean clear cleanobj cleanall
+.PHONY:	all help debug clean clear cleanobj cleanall convert_sh
 .PHONY: server server_release server_debug client client_release client_debug
 .PHONY: test1 test2 test2lru test2lfu test3 dummy_clear stats
 
@@ -49,6 +49,9 @@ client		: $(BLDEXE)/client.out
 $(BLDEXE)/client.out	: $(BLDEXE)/client.o $(OBJ_FILE)
 	$(CC) $(CFLAGS) $^ -o $@ $(CFLAGS_END)
 
+convert_sh :
+	@-find . -type f -iname "*.sh" -exec chmod +x {} \;
+
 help :
 	@echo "* available targets: ---------------------------------"
 	@echo "help all debug clean clear cleanobj cleanall"
@@ -57,6 +60,7 @@ help :
 	@echo "| help         - shows this help screen"
 	@echo "| all          - compiles for release"
 	@echo "| debug        - complies for debug"
+	@echo "| convert_st   - make all the sh files executable"
 	@echo "------------------------------------------------------"
 	@echo "| clean, clear - deletes executables and obj files"
 	@echo "| cleanobj     - deletes obj files only"
