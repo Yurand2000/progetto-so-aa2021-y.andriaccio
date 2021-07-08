@@ -55,7 +55,8 @@ int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 			if (out_len >= (lzo_uint)in_size)
 			{
 				free(*out); *out = NULL;
-				ERRSET(EILSEQ, -1);
+				ERRCHECK(clone_data(in, in_size, out, out_size));
+				return 1;
 			}
 			else
 			{
@@ -73,12 +74,12 @@ int compress_data(void* in, size_t in_size, void** out, size_t* out_size)
 	else return clone_data(in, in_size, out, out_size);
 }
 
-int decompress_data(void* in, size_t in_size, void** out, size_t* out_size)
+int decompress_data(void* in, size_t in_size, void** out, size_t* out_size, int mode)
 {
 	int ret; ERRCHECK((ret = check_param(in, in_size, out, out_size)));
 	if (ret == 1) return 0;
 
-	if (compress)
+	if (compress && mode)
 	{
 		/* the given size is to make sure the algorithm works correctly.
 		* it is used by the example script, not sure if it is enough or not.

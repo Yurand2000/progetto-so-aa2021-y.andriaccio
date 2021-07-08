@@ -39,6 +39,7 @@ int init_file_struct(file_t* file)
 	file->new_size = 0;
 	file->data = NULL;
 	file->open_data = NULL;
+	file->compressed = 0;
 
 	file->fifo_creation_time = 0;
 	file->lfu_frequency = 0;
@@ -70,6 +71,7 @@ int reset_file_struct(file_t* file)
 	file->new_size = 0;
 	file->data = NULL;
 	file->open_data = NULL;
+	file->compressed = 0;
 
 	file->fifo_creation_time = 0;
 	file->lfu_frequency = 0;
@@ -214,7 +216,7 @@ int open_file(file_t* file, int who)
 		{
 			size_t open_size;
 			ERRCHECKDO(decompress_data(file->data, file->data_size,
-				&file->open_data, &open_size), UNLOCK(file));
+				&file->open_data, &open_size, file->compressed), UNLOCK(file));
 			file->open_size = open_size;
 		}
 	}
@@ -234,7 +236,7 @@ int close_file(file_t* file, int who, long* difference)
 	CHECK_EXISTENCE(file);
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
-	int open = is_open_file_nolock(file);
+	int open = is_open_file_nolock(file); int ret;
 	if (open == -1) { UNLOCK(file); return -1; }
 	else if(open == 0)
 	{
@@ -244,8 +246,9 @@ int close_file(file_t* file, int who, long* difference)
 			size_t old_size = file->data_size + file->new_size;
 
 			free(file->data); file->data = NULL; file->data_size = 0;
-			ERRCHECKDO(compress_data(file->open_data, (size_t)file->open_size,
-				&file->data, &file->data_size), UNLOCK(file));
+			ERRCHECKDO((ret = compress_data(file->open_data, (size_t)file->open_size,
+				&file->data, &file->data_size)), UNLOCK(file));
+			file->compressed = ret;
 
 			*difference = (old_size - file->data_size);
 		}
