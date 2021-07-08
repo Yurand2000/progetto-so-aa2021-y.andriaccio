@@ -66,15 +66,15 @@ void print_operation_result(const char* op_type, const char* file, int res)
 
 int get_cwd(char* currdir[], size_t* currdir_size)
 {
-	ERRCHECK(getcwd(*currdir, FILENAME_MAX - 1) == NULL);
+	PTRCHECK(getcwd(*currdir, FILENAME_MAX - 1));
 	*currdir_size = strlen(*currdir);
 
 	//add trailing / if necessary
-	if (*currdir[*currdir_size - 1] != '/')
+	if ((*currdir)[(*currdir_size) - 1] != '/')
 	{
-		*currdir[*currdir_size] = '/';
-		*currdir[*currdir_size + 1] = '\0';
-		*currdir_size++;
+		(*currdir)[(*currdir_size)] = '/';
+		(*currdir)[(*currdir_size) + 1] = '\0';
+		(*currdir_size)++;
 	}
 }
 

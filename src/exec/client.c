@@ -24,15 +24,15 @@ int main(int argc, char* argv[])
 	int parse = parse_args(argc, argv, &socket_name, &do_print,
 		&reqs, &curr_reqs, &reqs_size, &time_between_reqs);
 	if (parse == 1) return 0;
-	PERRCHECK(parse, "CMD Parser error");
-	PERRCHECK(check_socket_file(socket_name), "Socket File Error");
+	PERRCHECK(parse == -1, "CMD Parser error");
+	PERRCHECK(check_socket_file(socket_name) == -1, "Socket File Error");
 
 	//if there are no requests, print the help
 	if (curr_reqs == 0) { print_help(); return 0; }
 
-	PERRCHECK(expand_requests(&reqs, &curr_reqs, &reqs_size, currdir, currdir_size),
+	PERRCHECK(expand_requests(&reqs, &curr_reqs, &reqs_size, currdir, currdir_size) == -1,
 		"Expand Requests Parse Error");
-	PERRCHECK(add_open_create_requests(&reqs, &curr_reqs, &reqs_size),
+	PERRCHECK(add_open_create_requests(&reqs, &curr_reqs, &reqs_size) == -1,
 		"Open/Create Parser Error");
 
 	//call the client api -----------------------------------------------------
