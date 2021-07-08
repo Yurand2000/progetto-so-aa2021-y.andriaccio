@@ -32,7 +32,7 @@ typedef struct shared_state
 	int max_reached_files;
 	int max_reached_conns;
 	int cache_miss_execs;
-	size_t last_evicted;
+	size_t lru_clock_pos;
 } shared_state;
 
 
