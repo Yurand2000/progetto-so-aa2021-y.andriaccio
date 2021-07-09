@@ -60,7 +60,7 @@ help :
 	@echo "| help         - shows this help screen"
 	@echo "| all          - compiles for release"
 	@echo "| debug        - complies for debug"
-	@echo "| convert_st   - make all the sh files executable"
+	@echo "| convert_sh   - make all the sh files executable"
 	@echo "------------------------------------------------------"
 	@echo "| clean, clear - deletes executables and obj files"
 	@echo "| cleanobj     - deletes obj files only"

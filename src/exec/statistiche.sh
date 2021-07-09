@@ -61,6 +61,12 @@ print_exit(){
 
 trap print_exit SIGINT
 
+#line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
+MAX_SIZE=$(eval "grep -o \"MaxSize:[0-9]*\" $1 | cut - -d ':' -f 2")
+MAX_FILES=$(eval "grep -o \"MaxFiles:[0-9]*\" $1 | cut - -d ':' -f 2")
+MAX_CONN=$(eval "grep -o \"MaxConn:[0-9]*\" $1 | cut - -d ':' -f 2")
+CACHE_MISS=$(eval "grep -o \"CacheMiss:[0-9]*\" $1 | cut - -d ':' -f 2")
+
 #line format 1: [timestamp] Thread:$$$ Read:$$$ Write:$$$ Client-Op:[$$$-$$$] Outcome:$$$ File:$$$
 TH_MAX=50
 for((i=0;i<$TH_MAX;i++)); do
@@ -90,12 +96,6 @@ UNLOCK=$(eval "grep -o \"\-Unlock\" $1 | wc -l")
 CLOSE=$(eval "grep -o \"\-Close\" $1 | wc -l")
 REMOVE=$(eval "grep -o \"\-Remove\" $1 | wc -l")
 SUCCESS=$(eval "grep -o \"Success.\" $1 | wc -l")
-
-#line format 2: [timestamp] MAIN MaxSize:$$$ MaxFiles:$$$ MaxConn:$$$ CacheMiss:$$$
-MAX_SIZE=$(eval "grep -o \"MaxSize:[0-9]*\" $1 | cut - -d ':' -f 2")
-MAX_FILES=$(eval "grep -o \"MaxFiles:[0-9]*\" $1 | cut - -d ':' -f 2")
-MAX_CONN=$(eval "grep -o \"MaxConn:[0-9]*\" $1 | cut - -d ':' -f 2")
-CACHE_MISS=$(eval "grep -o \"CacheMiss:[0-9]*\" $1 | cut - -d ':' -f 2")
 
 print_data
 
