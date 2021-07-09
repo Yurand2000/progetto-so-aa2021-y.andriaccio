@@ -53,7 +53,7 @@ int read_config_file(const char* filename, cfg_file_t* out)
 		}
 		else
 		{
-			token2 = strtok_r(token, " ", &saveptr2);
+			token2 = strtok_r(token, "\t ", &saveptr2);
 			strncpy(curr.key, token2, CFG_MAX_KEY_SIZE);
 		}
 
@@ -64,7 +64,7 @@ int read_config_file(const char* filename, cfg_file_t* out)
 		}
 		else
 		{
-			token2 = strtok_r(token, " ", &saveptr2);
+			token2 = strtok_r(token, "\t ", &saveptr2);
 			strncpy(curr.value, token2, CFG_MAX_VALUE_SIZE);
 		}
 

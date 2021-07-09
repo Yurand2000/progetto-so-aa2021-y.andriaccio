@@ -1,0 +1,9 @@
+# configuration file example * * * * * * * * * *
+# remove the '#' before each line to enable it *
+#socket_name=./socket.sk
+#log_name=./log.txt
+#worker_threads=4
+#storage_size=104857600
+#max_files=100
+#max_connections=10
+#algorithm=fifo
