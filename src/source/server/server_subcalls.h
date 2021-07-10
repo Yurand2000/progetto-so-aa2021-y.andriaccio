@@ -19,7 +19,7 @@
 
 //server_parsing.c
 int parse_cmd_start_log(int argc, char* argv[], cfg_t* config_data, log_t* log);
-int command_line_parsing(int argc, char* argv[], char* cfg);
+int command_line_parsing(int argc, char* argv[], char** cfg);
 void init_default_config(cfg_t* cfg);
 int parse_config_from_file(cfg_t* cfg, char const* filename);
 int print_stats(log_t* log, shared_state* state, file_t* files, size_t file_num);

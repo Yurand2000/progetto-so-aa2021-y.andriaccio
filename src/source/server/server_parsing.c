@@ -23,8 +23,8 @@
 
 int parse_cmd_start_log(int argc, char* argv[], cfg_t* config_data, log_t* log)
 {
-	char* cfg = NULL;
-	ERRCHECK(command_line_parsing(argc, argv, cfg));
+	char* cfg = DEFAULT_CONFIG_FILE_NAME;
+	ERRCHECK(command_line_parsing(argc, argv, &cfg));
 	init_default_config(config_data);
 	ERRCHECK(parse_config_from_file(config_data, cfg));
 	ERRCHECK(init_log_file_struct(log, config_data->log_file));
@@ -32,17 +32,15 @@ int parse_cmd_start_log(int argc, char* argv[], cfg_t* config_data, log_t* log)
 	return 0;
 }
 
-int command_line_parsing(int argc, char* argv[], char* cfg)
+int command_line_parsing(int argc, char* argv[], char** cfg)
 {
-	cfg = DEFAULT_CONFIG_FILE_NAME;
-
 	int option;
 	while ((option = getopt(argc, argv, ":hc:")) != -1)
 	{
 		switch (option)
 		{
 		case 'c':
-			cfg = optarg;
+			*cfg = optarg;
 			break;
 		case 'h':
 			printf("server application; arguments: [-c config_file] [-h]\n");
