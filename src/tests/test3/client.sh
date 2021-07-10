@@ -10,7 +10,7 @@ sleep 2
 
 MAX_CLIENTS=11
 for((i = 0; i < $MAX_CLIENTS; i++)); do
-	$TESTDIR/run_client.sh $i &
+	$TESTDIR/run_client.sh &
 	CLIENTS[$i]=$!
 done
 
