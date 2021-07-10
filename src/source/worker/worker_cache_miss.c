@@ -138,17 +138,17 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 	return 0;
 }
 
-static int LRU_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_num, size_t clock_pos)
+static int LRU_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_num)
 {
 	int ret; char temp;
 	ERRCHECK( (ret = loop_check(i, nodel_file, files, file_num)) );
 	if (ret == 1) return 0;
 
-	ret = get_usage_data(&files[clock_pos], NULL, NULL, &temp);
+	ret = get_usage_data(&files[i], NULL, NULL, &temp);
 	if (ret == 0)
 	{
 		if (temp == 1)
-			update_lru(&files[clock_pos], 0);
+			update_lru(&files[i], 0);
 		else
 			return 1;
 	}
@@ -167,8 +167,7 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 	int exit = 0; size_t expel = 0;
 	for (size_t i = 0; i < file_num && exit == 0; i++)
 	{
-		ERRCHECK( (exit = LRU_loop_do(i, nodel_file, files,
-			file_num, clock_pos)) );
+		ERRCHECK( (exit = LRU_loop_do(clock_pos, nodel_file, files, file_num)) );
 		if (exit == 1) expel = clock_pos;
 
 		clock_pos = (clock_pos + 1) % file_num;
