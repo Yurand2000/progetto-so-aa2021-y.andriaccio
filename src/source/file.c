@@ -123,7 +123,7 @@ int get_file_name(file_t* file, char** out_data, size_t* out_data_size, size_t* 
 
 int check_file_name(file_t* file, char const* name)
 {
-	if (file == NULL) ERRSET(EINVAL, -1);
+	if (file == NULL || name == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
 	CHECK_EXISTENCE(file);
 	int cmp = strcmp(file->name, name);
@@ -228,7 +228,7 @@ int open_file(file_t* file, int who)
 
 int close_file(file_t* file, int who, long* difference)
 {
-	if (file == NULL || who <= OWNER_NEXIST) ERRSET(EINVAL, -1);
+	if (file == NULL || who <= OWNER_NEXIST || difference == NULL) ERRSET(EINVAL, -1);
 
 	LOCK(file);
 	CHECK_EXISTENCE(file);
@@ -344,7 +344,6 @@ int append_file(file_t* file, int who, const void* data, size_t data_size)
 	if (file->owner != OWNER_NULL && file->owner != who)
 		ERRSETDO(EAGAIN, UNLOCK(file), -1);
 	CHECK_OPEN_FILE(file);
-	if(file->open_size == 0) ERRSETDO(ENOENT, UNLOCK(file), -1);
 
 	void* out;
 	REALLOCDO(out, file->open_data, file->open_size + data_size, UNLOCK(file));
@@ -393,7 +392,7 @@ int unlock_file(file_t* file, int who)
 
 int remove_file(file_t* file, int who, long* data_size)
 {
-	if(file == NULL || who < OWNER_NEXIST) ERRSET(EINVAL, -1);
+	if(file == NULL || who < OWNER_NEXIST || data_size == NULL) ERRSET(EINVAL, -1);
 	LOCK(file);
 	CHECK_EXISTENCE(file);
 	if (file->owner == OWNER_NULL || file->owner != who)
@@ -406,7 +405,7 @@ int remove_file(file_t* file, int who, long* data_size)
 
 int force_remove_file(file_t* file, long* data_size)
 {
-	if (file == NULL) ERRSET(EINVAL, -1);
+	if (file == NULL || data_size == NULL) ERRSET(EINVAL, -1);
 	ERRCHECK(remove_file(file, OWNER_ADMIN, data_size));
 	return 0;
 }

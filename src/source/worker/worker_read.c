@@ -37,7 +37,8 @@ int do_read_file(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 		{
 			out_msg->type |= MESSAGE_OP_SUCC;
 
-			ERRCHECK(push_buf(&out_msg->data, sizeof(char) * read_size, buf));
+			if(read_size != 0)
+				ERRCHECK(push_buf(&out_msg->data, sizeof(char) * read_size, buf));
 			ERRCHECK(push_buf(&out_msg->data, sizeof(size_t), &read_size));
 			free(buf);
 
@@ -116,7 +117,8 @@ int do_readn_files(int thread_id, int* conn, net_msg* in_msg, net_msg* out_msg,
 			{
 				if (get_file_name(&files[i], (char**)(&name), &name_size, &read_name) == 0)
 				{
-					ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_buf, buf), { free(buf); free(name); });
+					if(read_buf != 0)
+						ERRCHECKDO(push_buf(&out_msg->data, sizeof(char) * read_buf, buf), { free(buf); free(name); });
 					ERRCHECKDO(push_buf(&out_msg->data, sizeof(size_t), &read_buf), { free(buf); free(name); });
 					total_read += read_buf;
 
