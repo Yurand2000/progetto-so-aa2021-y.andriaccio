@@ -164,7 +164,7 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 	size_t clock_pos = state->lru_clock_pos;
 	ERRCHECK(pthread_mutex_unlock(&state->state_mux));
 
-	int exit; size_t expel;
+	int exit = 0; size_t expel = 0;
 	for (size_t i = 0; i < file_num && exit == 0; i++)
 	{
 		ERRCHECK( (exit = LRU_loop_do(i, nodel_file, files,
