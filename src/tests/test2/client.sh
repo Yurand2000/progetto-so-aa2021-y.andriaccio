@@ -14,10 +14,12 @@ sleep 3
 #launch clients
 echo "-------------------------"
 echo "Fill the server with max files and capacity"
-for((i = 0; i < 4; i++))
+for((i = 0; i < 4; i++)); do
 	$CLIENT $CLIENT_OPT -W $TESTDIR/fill/file_$i.txt -a $TESTDIR/fill/file_$i.txt -u $TESTDIR/fill/file_$i.txt -D $TESTDIR/cmiss
-for((i = 4; i < 8; i++))
+done
+for((i = 4; i < 8; i++)); do
 	$CLIENT $CLIENT_OPT -W $TESTDIR/fill/file_$i.txt -D $TESTDIR/cmiss
+done
 echo "-------------------------"
 echo "Cache miss"
 $CLIENT $CLIENT_OPT -W $TESTDIR/data/file_0.txt -D $TESTDIR/cmiss
