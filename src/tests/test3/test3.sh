@@ -1,6 +1,6 @@
 #!/bin/bash
 
-$1/server.out -c ./src/tests/test3/test3.cfg &
+./build/exec/server.out -c ./src/tests/test3/test3.cfg &
 SERVER=$!
 ./src/tests/test3/client.sh &
 sleep 32

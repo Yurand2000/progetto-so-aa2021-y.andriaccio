@@ -77,15 +77,15 @@ help :
 	@echo "                        all the tests.)"
 
 test1	: all
-	@$(TESTD)/test1/test1.sh $(BLDEXE)
+	@$(TESTD)/test1/test1.sh
 test2	: all
-	@$(TESTD)/test2/test2.sh $(BLDEXE) fifo
+	@$(TESTD)/test2/test2.sh fifo
 test2lru : all
-	@$(TESTD)/test2/test2.sh $(BLDEXE) lru
+	@$(TESTD)/test2/test2.sh lru
 test2lfu : all
-	@$(TESTD)/test2/test2.sh $(BLDEXE) lfu
+	@$(TESTD)/test2/test2.sh lfu
 test3	: all dummy
-	@$(TESTD)/test3/test3.sh $(BLDEXE)
+	@$(TESTD)/test3/test3.sh
 stats	:
 	@$(SEXEC)/statistiche.sh log.txt
 

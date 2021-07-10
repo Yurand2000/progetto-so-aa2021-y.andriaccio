@@ -28,7 +28,8 @@ OP_SIZE=${#OPS[@]}
 
 RUN=$CLIENT$CLIENT_OPT
 function on_sigint(){
-  echo "Client calls: "$COUNT
+	sleep 2
+  echo "Client $1 calls count: "$COUNT
   exit 0
 }
 trap on_sigint SIGINT
@@ -44,7 +45,7 @@ while true; do
   RET=$?
   ((COUNT++))
   if [ $RET -ne 0 ] ; then
-    echo "Client returned an error: "$RET" - "$CALL" - "$COUNT
+    echo "Client $1 returned an error: "$RET" - calls count: "$COUNT
     break
   fi
 done
