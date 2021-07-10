@@ -94,8 +94,8 @@ static int loop_check(size_t i, char* nodel_file, file_t* files, size_t file_num
 		else if (errno != ENOENT) return -1;
 	}
 
-	if (datasize > 0) return 1;
-	else return 0;
+	if (datasize > 0) return 0;
+	else return 1;
 }
 
 static int FIFO_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_num, size_t* curr_older, time_t* curr_older_time, int* selected)
