@@ -29,11 +29,8 @@ int main(int argc, char* argv[])
 	log_t log_file;
 
 	//parse command line and load config file, start logging ------------------
-	if (parse_cmd_start_log(argc, argv, &config_data, &log_file) == -1)
-	{
-		if (errno != EINVAL) { perror("Startup error"); return 1; }
-		else return 0;
-	}
+	PERRCHECK(parse_cmd_start_log(argc, argv, &config_data, &log_file), "Startup error");
+
 	printf("* * * SERVER STARTED * * *\n");
 	//prepare compression library ---------------------------------------------
 	PERRCHECK(compression_init(), "Compression library error");
