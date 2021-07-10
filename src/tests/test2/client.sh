@@ -23,9 +23,8 @@ done
 echo "-------------------------"
 echo "Cache miss"
 $CLIENT $CLIENT_OPT -W $TESTDIR/data/file_0.txt -D $TESTDIR/cmiss
-$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_1.txt -D $TESTDIR/cmiss
-$CLIENT $CLIENT_OPT -c $TESTDIR/fill/file_2.txt -a $TESTDIR/fill/file_3.txt,$TESTDIR/fill/file_4.txt -D $TESTDIR/cmiss
-$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_3.txt,$TESTDIR/data/file_4.txt,$TESTDIR/data/file_5.txt -D $TESTDIR/cmiss
+$CLIENT $CLIENT_OPT -c $TESTDIR/fill/file_1.txt -a $TESTDIR/fill/file_3.txt,$TESTDIR/fill/file_4.txt -D $TESTDIR/cmiss
+$CLIENT $CLIENT_OPT -W $TESTDIR/data/file_2.txt,$TESTDIR/data/file_3.txt,$TESTDIR/data/file_4.txt -D $TESTDIR/cmiss
 sleep 1
 echo "-------------------------"
 
