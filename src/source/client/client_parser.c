@@ -65,9 +65,9 @@ int parse_args(int argc, char* argv[], char** socket_name, int* do_print,
 		case 'D':
 			if (prec != 'w' && prec != 'W' && prec != 'a')
 			{
-				printf("-D flag requires a preceding -w or -W flag. "
+				printf("-D flag requires a preceding -w, -W or -a flag. "
 					"Start with -h for details.\n");
-				return -1;
+				ERRSET(EINVAL, -1);
 			}
 			else
 				ERRCHECK(write_dir_to_last_request(reqs, curr_reqs));
