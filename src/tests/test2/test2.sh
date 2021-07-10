@@ -14,3 +14,6 @@ fi
 SERVER=$!
 ./src/tests/test2/client.sh
 kill -s SIGHUP $SERVER
+sleep 2
+echo "Esecuzioni cachemiss di seguito:"
+grep "CacheMiss" log.txt

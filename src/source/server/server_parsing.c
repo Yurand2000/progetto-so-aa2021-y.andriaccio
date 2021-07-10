@@ -23,17 +23,18 @@
 
 int parse_cmd_start_log(int argc, char* argv[], cfg_t* config_data, log_t* log)
 {
-	if (command_line_parsing(argc, argv, config_data) == -1 && errno == EINVAL)
-		return -1;
-
+	char* cfg = NULL;
+	ERRCHECK(command_line_parsing(argc, argv, cfg));
+	init_default_config(config_data);
+	ERRCHECK(parse_config_from_file(config_data, cfg));
 	ERRCHECK(init_log_file_struct(log, config_data->log_file));
 	ERRCHECK(reset_log(log));
 	return 0;
 }
 
-int command_line_parsing(int argc, char* argv[], cfg_t* config_data)
+int command_line_parsing(int argc, char* argv[], char* cfg)
 {
-	char* cfg = DEFAULT_CONFIG_FILE_NAME;
+	cfg = DEFAULT_CONFIG_FILE_NAME;
 
 	int option;
 	while ((option = getopt(argc, argv, ":hc:")) != -1)
@@ -53,8 +54,6 @@ int command_line_parsing(int argc, char* argv[], cfg_t* config_data)
 		}
 	}
 
-	init_default_config(config_data);
-	ERRCHECK(parse_config_from_file(config_data, cfg));
 	return 0;
 }
 

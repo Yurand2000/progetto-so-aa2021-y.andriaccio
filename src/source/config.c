@@ -32,7 +32,11 @@ int read_config_file(const char* filename, cfg_file_t* out)
 	char* token, *token2, *saveptr, *saveptr2;
 
 	FILE* cfg = fopen(filename, "r");
-	PTRCHECK(cfg);
+	if (cfg == NULL)
+	{
+		if (errno == ENOENT) return 0;
+		else return -1;
+	}
 
 	while(getline(&line, &line_size, cfg) > 0)
 	{

@@ -25,11 +25,10 @@
 
 #define THREAD_ERRCHECK_ADV(cond) if(cond == -1) {\
 	THREAD_ERRCHECK(pthread_mutex_lock(&data->thread_mux));\
-    data->do_work = WORKER_DEAD;\
+    data->do_work = WORKER_DONE;\
 	THREAD_ERRCHECK(pthread_mutex_unlock(&data->thread_mux));\
 	THREAD_ERRCHECK(pthread_kill(data->shared->ro_main_thread, SIGUSR1));\
 	perror("Thread failure [2]");\
-	return (void*)0;\
 };
 
 int init_worker_data(worker_data* wd, int thread_id, file_t* files, size_t file_num,
