@@ -115,7 +115,8 @@ static int FIFO_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_n
 		}
 	}
 	else if (errno != ENOENT) return -1;
-	else return 0;
+
+	return 0;
 }
 
 int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
@@ -123,7 +124,7 @@ int evict_FIFO(log_t* log, int thread, char* nodel_file, file_t* files, size_t f
 {
 	size_t curr_older = 0;
 	time_t curr_older_time = time(NULL);
-	int selected = 0, ret;
+	int selected = 0;
 
 	for (size_t i = 0; i < file_num; i++)
 	{
@@ -152,7 +153,8 @@ static int LRU_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_nu
 			return 1;
 	}
 	else if (errno != ENOENT) return -1;
-	else return 0;
+
+	return 0;
 }
 
 int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
@@ -185,7 +187,7 @@ int evict_LRU(log_t* log, int thread, char* nodel_file, file_t* files, size_t fi
 
 static int LFU_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_num, size_t* curr_least_used, int* curr_least_used_freq, int* selected)
 {
-	int ret; char temp;
+	int ret; int temp;
 	ERRCHECK((ret = loop_check(i, nodel_file, files, file_num)));
 	if (ret == 1) return 0;
 	
@@ -200,6 +202,8 @@ static int LFU_loop_do(size_t i, char* nodel_file, file_t* files, size_t file_nu
 		}
 	}
 	else if (errno != ENOENT) return -1;
+
+	return 0;
 }
 
 int evict_LFU(log_t* log, int thread, char* nodel_file, file_t* files, size_t file_num, shared_state* state,
