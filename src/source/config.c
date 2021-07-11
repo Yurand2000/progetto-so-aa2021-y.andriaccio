@@ -1,11 +1,10 @@
 #include "config.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 
 #include "errset.h"
-
 
 //static reallocating function
 static int realloc_cfg_struct(cfg_file_t* cfg, size_t newsize)
@@ -76,11 +75,11 @@ int read_config_file(const char* filename, cfg_file_t* out)
 			ERRCHECKDO(realloc_cfg_struct(out, out->size + 10),
 				{ free_config_file(out); free(line); } );
 
-		memcpy(&(out->cfgs[out->count]), &curr, sizeof(cfg_kv));
+		memcpy( &(out->cfgs[out->count]), &curr, sizeof(cfg_kv) );
 		out->count++;
 	}
 	free(line);
-	ERRCHECKDO(realloc_cfg_struct(out, out->count), free_config_file(out));
+	ERRCHECKDO(realloc_cfg_struct(out, out->count), { free_config_file(out); });
 
 	fclose(cfg);
 	return 0;
