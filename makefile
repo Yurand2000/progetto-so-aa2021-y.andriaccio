@@ -107,7 +107,6 @@ dummy_clear :
 clear : clean
 clean :
 	@-rm -f -r $(BUILD)
-	@-rm -f -r $(COVERAGE)	
 
 cleanobj :
 	@-rm -f -r $(BUILD)/exec/*.o
